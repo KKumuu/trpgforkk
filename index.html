@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TRPG 리플레이북 변환기</title>
+    <title>TRPG 리플레이북 변환기 (v10.3 Clean Print)</title>
     
     <!-- 1. 폰트 로드 -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -54,58 +54,59 @@
             --line-height-body: 1.6;
         }
 
-        body { background-color: #1a1a1a; color: #e5e5e5; font-family: var(--font-sans); }
+        body { background-color: #f0f0f0; color: #333; font-family: var(--font-sans); }
 
         /* 스크롤바 */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #2a2a2a; }
-        ::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
+        ::-webkit-scrollbar-track { background: #e0e0e0; }
+        ::-webkit-scrollbar-thumb { background: #999; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #777; }
 
-        /* 사이드바 */
-        #sidebar { background: #252525; border-right: 1px solid #333; }
-        .sidebar-header { border-bottom: 1px solid #333; background: #252525; }
+        /* 사이드바 (그림자 제거, 플랫 디자인) */
+        #sidebar { background: #fff; border-right: 1px solid #ddd; box-shadow: none; }
+        .sidebar-header { border-bottom: 1px solid #eee; background: #fff; }
+        .sidebar-header h1 { color: #333; } /* 텍스트 색상 변경 */
         .sidebar-section-title {
-            color: #888; font-size: 0.75rem; font-weight: 700;
+            color: #666; font-size: 0.75rem; font-weight: 700;
             text-transform: uppercase; letter-spacing: 0.05em;
             padding-bottom: 0.5rem; margin-bottom: 0.75rem;
-            border-bottom: 1px solid #333;
+            border-bottom: 1px solid #eee;
             display: flex; align-items: center; gap: 0.5rem;
         }
         
         .custom-input {
-            width: 100%; background: #333; border: 1px solid #444;
-            color: #fff; padding: 0.5rem; border-radius: 4px;
+            width: 100%; background: #fff; border: 1px solid #ccc;
+            color: #333; padding: 0.5rem; border-radius: 4px;
             font-size: 0.85rem; outline: none; transition: border-color 0.2s;
         }
         .custom-input:focus { border-color: #666; }
         
-        .input-helper { font-size: 0.7rem; color: #666; margin-top: 2px; margin-bottom: 6px; }
+        .input-helper { font-size: 0.7rem; color: #888; margin-top: 2px; margin-bottom: 6px; }
         
-        .toggle-btn-group { display: flex; background: #333; border-radius: 4px; padding: 2px; }
+        .toggle-btn-group { display: flex; background: #f5f5f5; border-radius: 4px; padding: 2px; border: 1px solid #ddd; }
         .toggle-btn {
             flex: 1; padding: 4px 0; text-align: center;
             font-size: 0.75rem; border-radius: 3px;
-            transition: all 0.2s; color: #888;
+            transition: all 0.2s; color: #666;
         }
-        .toggle-btn.active { background: #555; color: #fff; font-weight: 600; }
-        .toggle-btn:hover:not(.active) { color: #ccc; }
+        .toggle-btn.active { background: #666; color: #fff; font-weight: 600; }
+        .toggle-btn:hover:not(.active) { color: #333; background: #e0e0e0; }
 
-        .input-group label { display: block; font-size: 0.75rem; color: #aaa; margin-bottom: 0.25rem; }
+        .input-group label { display: block; font-size: 0.75rem; color: #555; margin-bottom: 0.25rem; font-weight: 600; }
 
-        /* 책 페이지 (그림자 제거됨) */
+        /* 책 페이지 (완전 평면, 그림자 없음) */
         .book-page {
             width: var(--page-width); height: var(--page-height);
             background: white; box-sizing: border-box;
             position: relative; overflow: hidden; margin: 0 auto;
-            /* box-shadow 제거 */
+            /* 그림자 완전 제거 */
             box-shadow: none; 
-            /* 화면상 구분을 위한 미세한 테두리만 남김 (인쇄시는 사라짐) */
-            border: 1px solid #e5e5e5;
+            /* 화면상 구분을 위한 1px 테두리 */
+            border: 1px solid #ccc;
             display: none; 
             padding: var(--margin-top) var(--margin-outer) var(--margin-bottom) var(--margin-inner);
-            color: #222; /* 완전 검정보다 눈이 편한 진한 회색 */
-            transform-origin: center top;
+            color: #000; transform-origin: center top;
+            /* 인쇄 시 정확한 색상 출력 */
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
@@ -114,7 +115,7 @@
 
         .page-number {
             position: absolute; bottom: 12mm; left: 0; width: 100%;
-            text-align: center; font-size: 9pt; color: #555;
+            text-align: center; font-size: 9pt; color: #000;
             font-family: var(--font-sans); font-weight: 500; z-index: 50;
         }
 
@@ -123,56 +124,69 @@
             display: flex; flex-direction: column; align-items: stretch;
         }
 
-        /* 오버레이 (로딩/모달) */
+        /* 오버레이 */
         .overlay {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.8);
+            position: fixed; inset: 0; background: rgba(0,0,0,0.5);
             z-index: 100; display: none;
             justify-content: center; align-items: center;
-            backdrop-filter: blur(5px);
+            backdrop-filter: blur(2px);
         }
         .progress-bar-container {
             width: 100%; max-width: 300px; height: 6px;
-            background-color: #444; border-radius: 9999px;
+            background-color: #ddd; border-radius: 9999px;
             overflow: hidden; margin-top: 15px;
         }
         .progress-bar-fill {
-            height: 100%; background-color: #6366f1; width: 0%;
+            height: 100%; background-color: #4f46e5; width: 0%;
             transition: width 0.1s linear;
         }
 
-        /* EPUB 모달 */
+        /* 모달 박스 (그림자 최소화) */
         .modal-box {
-            background: #252525; border: 1px solid #444;
-            padding: 24px; border-radius: 12px; width: 320px;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+            background: #fff; border: 1px solid #ccc;
+            padding: 24px; border-radius: 8px; width: 320px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            color: #333;
         }
 
         /* 편집 모드 */
         [contenteditable="true"] { outline: 1px dashed transparent; cursor: text; transition: all 0.2s; }
         body.edit-mode-active [contenteditable="true"]:hover,
         body.edit-mode-active [contenteditable="true"]:focus {
-            outline: 1px dashed #6366f1; background-color: rgba(99, 102, 241, 0.05); border-radius: 2px;
+            outline: 1px dashed #4f46e5; background-color: rgba(79, 70, 229, 0.05); border-radius: 2px;
         }
 
-        /* 인쇄 모드 */
+        /* 인쇄 모드 설정 (가장 중요) */
         @media print {
-            @page { margin: 0; }
+            @page { 
+                /* 여백 0으로 설정하여 A5 용지에 꽉 차게 */
+                margin: 0; 
+                size: auto; /* 브라우저 설정 따름 (JS에서 주입) */
+            }
             body { background: white; margin: 0; }
             #sidebar, #preview-controls, .no-print, .overlay, #page-controls-top { display: none !important; }
-            #main-content { display: block; padding: 0; height: auto; overflow: visible; background: transparent; width: 100%; }
+            #main-content { 
+                display: block; padding: 0; height: auto; 
+                overflow: visible; background: transparent; width: 100%; 
+                margin: 0;
+            }
             [contenteditable="true"] { outline: none !important; background: none !important; }
+            
             .book-page {
                 display: block !important; margin: 0 !important;
-                box-shadow: none !important; border: none !important;
+                /* 모든 테두리 및 그림자 제거 */
+                box-shadow: none !important; 
+                border: none !important;
                 break-after: page; page-break-after: always;
-                width: 100% !important; height: 100% !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
+                /* A5 사이즈 강제 */
+                width: 148mm !important; 
+                height: 210mm !important;
+                overflow: hidden !important;
             }
             .book-page:last-child { break-after: auto; }
         }
 
-        /* 로그 스타일 (Eco & Aesthetic) */
+        /* 로그 스타일 */
         .font-serif { font-family: var(--font-serif) !important; }
         .font-sans { font-family: var(--font-sans) !important; }
         
@@ -180,68 +194,58 @@
         
         .dialogue-box { display: flex; flex-direction: column; gap: 2px; }
         .dialogue-box .char-name {
-            font-size: 9pt; font-weight: 700; color: #111;
+            font-size: 9pt; font-weight: 700; color: #000;
             margin-left: 2px; margin-bottom: 2px; display: flex; align-items: center; gap: 6px;
         }
-        /* 이름 장식: 작은 점 (잉크 절약) */
         .dialogue-box .char-name::before {
             content: ''; display: block; width: 3px; height: 3px;
-            background-color: #333; border-radius: 50%;
+            background-color: #000; border-radius: 50%;
         }
 
-        .dialogue-box.layout-side { 
-            flex-direction: row; 
-            gap: 12px; 
-            align-items: flex-start;
-        }
+        .dialogue-box.layout-side { flex-direction: row; gap: 12px; align-items: flex-start; }
         .dialogue-box.layout-side .char-name {
-            width: 24mm; 
-            flex-shrink: 0;
-            text-align: left; 
-            justify-content: flex-start;
-            margin: 0;
-            padding-right: 8px;
-            border-right: 1px solid #ccc; /* 얇은 회색 선 */
-            font-size: 9pt;
+            width: 24mm; flex-shrink: 0; text-align: left; 
+            justify-content: flex-start; margin: 0; padding-right: 8px;
+            border-right: 2px solid #ccc; font-size: 9pt;
         }
         .dialogue-box.layout-side .char-name::before { display: none; } 
         .dialogue-box.layout-side .dialogue-text { flex: 1; padding-left: 0; }
         
         .dialogue-text {
             line-height: var(--line-height-body); font-size: var(--font-size-body);
-            color: #222; padding-left: 2px; text-align: justify;
+            color: #000; padding-left: 2px; text-align: justify;
         }
         .dialogue-text p { margin: 0; text-indent: 0; } 
         .dialogue-text p + p { margin-top: 0.2em; }
 
         .narration-box {
-            color: #333; padding: 0.5rem 0; margin: 0.8rem 0;
+            color: #000; padding: 0.5rem 0; margin: 0.8rem 0;
             line-height: var(--line-height-body); font-size: var(--font-size-body);
             position: relative;
         }
         .narration-box.align-center { text-align: center; }
         .narration-box.align-left { text-align: left; padding-left: 0; border-left: none; }
         
-        /* 주사위 판정 (그림자 제거됨) */
+        /* 주사위 판정 (잉크 절약형, 그림자 제거) */
         .dice-container {
-            border: 1px solid #999; /* 진한 회색 테두리 */
+            border: 1px solid #999; 
             border-radius: 4px;
             margin: 14px auto; 
             width: 85%; 
             overflow: hidden;
             font-size: 9pt;
-            background: #fff; /* 흰색 배경 */
+            background: #fff; 
             color: #000;
             break-inside: avoid;
-            box-shadow: none; /* 그림자 완전 제거 */
+            box-shadow: none; /* 그림자 제거 */
         }
         .dice-header {
-            background: transparent; /* 배경색 제거 */
+            background: transparent; /* 배경 없음 */
             padding: 6px 12px;
-            border-bottom: 1px solid #ddd; /* 연한 구분선 */
+            border-bottom: 1px solid #ddd;
             font-weight: 700; 
             font-family: var(--font-sans);
-            color: #444;
+            color: #333;
             font-size: 9pt;
             text-align: center;
             letter-spacing: 0.05em;
@@ -251,36 +255,28 @@
             font-family: 'Courier Prime', 'NanumSquare', monospace;
             line-height: 1.6;
             font-size: 9.5pt;
-            color: #111;
+            color: #000;
             text-align: center;
         }
-        /* 결과값: 반전 대신 테두리 박스로 강조 */
         .dice-result {
-            display: inline-block; /* 글자 크기에 맞게 */
-            margin: 0 auto 10px auto; /* 중앙 정렬 */
+            display: inline-block;
+            margin: 0 auto 10px auto;
             padding: 4px 12px;
             text-align: center;
             font-weight: 700;
             background: #fff; 
             color: #000;
-            border: 1px solid #000; /* 검은 테두리 */
-            border-radius: 12px; /* 둥근 뱃지 */
+            border: 1px solid #000; /* 테두리로 강조 */
+            border-radius: 12px;
             font-family: var(--font-sans);
             font-size: 10pt;
         }
-        /* 결과값을 감싸는 부모 컨테이너 (중앙 정렬용) */
-        .dice-result-wrapper {
-            text-align: center;
-            padding-bottom: 8px;
-        }
+        .dice-result-wrapper { text-align: center; padding-bottom: 8px; }
 
-        /* 시스템 메시지 (주석 스타일) */
         .system-box {
-            font-size: 9.5pt; color: #555; text-align: center;
-            border-top: 1px double #ccc; /* 이중선 */
-            border-bottom: 1px double #ccc;
-            padding: 4px 0; margin: 12px 0; 
-            font-family: var(--font-mono);
+            font-size: 9.5pt; color: #333; text-align: center;
+            border-top: 1px double #ccc; border-bottom: 1px double #ccc;
+            padding: 4px 0; margin: 12px 0; font-family: var(--font-mono);
         }
 
         .cover-image { width: 100%; height: 100%; object-fit: cover; filter: grayscale(100%); }
@@ -303,26 +299,26 @@
         <div class="progress-bar-container">
             <div id="progress-bar" class="progress-bar-fill"></div>
         </div>
-        <div id="loading-text" class="text-gray-400 text-sm mt-3 font-mono">준비 중...</div>
+        <div id="loading-text" class="text-gray-200 text-sm mt-3 font-mono">준비 중...</div>
     </div>
 
     <!-- EPUB 정보 모달 -->
     <div id="epub-modal" class="overlay" style="display: none;">
         <div class="modal-box">
-            <h2 class="text-white font-bold mb-4 flex items-center gap-2">
+            <h2 class="text-gray-800 font-bold mb-4 flex items-center gap-2">
                 <i data-lucide="book-open" size="18"></i> EPUB 정보 입력
             </h2>
             <div class="space-y-4">
                 <div>
-                    <label class="block text-xs text-gray-400 mb-1">책 제목</label>
+                    <label class="block text-xs text-gray-500 mb-1">책 제목</label>
                     <input type="text" id="modal-title" class="custom-input" value="TRPG Replay Log">
                 </div>
                 <div>
-                    <label class="block text-xs text-gray-400 mb-1">저자</label>
+                    <label class="block text-xs text-gray-500 mb-1">저자</label>
                     <input type="text" id="modal-author" class="custom-input" value="Unknown">
                 </div>
                 <div class="flex gap-2 mt-6">
-                    <button onclick="closeEpubModal()" class="flex-1 py-2 rounded bg-gray-700 text-white text-sm hover:bg-gray-600">취소</button>
+                    <button onclick="closeEpubModal()" class="flex-1 py-2 rounded bg-gray-200 text-gray-700 text-sm hover:bg-gray-300">취소</button>
                     <button onclick="startEpubExport()" class="flex-1 py-2 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-500 font-bold">저장</button>
                 </div>
             </div>
@@ -330,13 +326,13 @@
     </div>
 
     <!-- 사이드바 -->
-    <aside id="sidebar" class="w-80 flex flex-col z-20 shadow-2xl">
+    <aside id="sidebar" class="w-80 flex flex-col z-20">
         <div class="sidebar-header p-5">
-            <h1 class="text-lg font-bold flex items-center gap-2 text-white">
-                <i data-lucide="book-template" class="text-gray-400"></i> 
+            <h1 class="text-lg font-bold flex items-center gap-2">
+                <i data-lucide="book-template" class="text-indigo-600"></i> 
                 TRPG 리플레이북
             </h1>
-            <p class="text-xs text-gray-500 mt-1">HTML 로그 변환기 v10.2</p>
+            <p class="text-xs text-gray-500 mt-1">HTML 로그 변환기 v10.3</p>
         </div>
 
         <div class="flex-1 overflow-y-auto p-5 space-y-6">
@@ -405,60 +401,59 @@
             </div>
         </div>
 
-        <div class="p-5 border-t border-[#333] bg-[#252525] flex flex-col gap-3">
-            <button onclick="window.print()" class="w-full flex justify-center items-center gap-2 bg-white hover:bg-gray-200 text-black font-bold py-3 px-4 rounded transition-all active:scale-95 shadow-lg">
-                <i data-lucide="printer" size="18"></i> PDF 저장
+        <div class="p-5 border-t border-gray-200 bg-gray-50 flex gap-2">
+            <button onclick="window.print()" class="flex-1 flex justify-center items-center gap-2 bg-white hover:bg-gray-100 text-gray-800 border border-gray-300 font-bold py-2 px-2 rounded shadow-sm text-sm">
+                <i data-lucide="printer" size="16"></i> PDF 저장
             </button>
-            <button onclick="openEpubModal()" class="w-full flex justify-center items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded transition-all active:scale-95 shadow-lg">
-                <i data-lucide="book-down" size="18"></i> EPUB 저장
+            <button onclick="openEpubModal()" class="flex-1 flex justify-center items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-2 rounded shadow-sm text-sm">
+                <i data-lucide="book-down" size="16"></i> EPUB 저장
             </button>
         </div>
     </aside>
 
     <!-- 메인 뷰어 -->
-    <main id="main-content" class="flex-1 flex flex-col justify-center items-center relative overflow-hidden bg-[#1a1a1a]">
+    <main id="main-content" class="flex-1 flex flex-col justify-center items-center relative overflow-hidden bg-[#e5e5e5]">
         
         <!-- 네비게이션 -->
         <div id="preview-controls" class="absolute inset-0 pointer-events-none flex justify-between items-center px-4 md:px-16 z-10 no-print">
-            <button onclick="changePage(-1)" class="pointer-events-auto bg-[#333]/80 text-white p-3 rounded-full hover:bg-[#555] disabled:opacity-0 transition-all backdrop-blur-sm" id="btnPrev">
+            <button onclick="changePage(-1)" class="pointer-events-auto bg-white text-gray-700 p-2 rounded-full shadow-md border border-gray-200 hover:bg-gray-50 disabled:opacity-0 transition-all" id="btnPrev">
                 <i data-lucide="chevron-left" size="24"></i>
             </button>
-            <button onclick="changePage(1)" class="pointer-events-auto bg-[#333]/80 text-white p-3 rounded-full hover:bg-[#555] disabled:opacity-0 transition-all backdrop-blur-sm" id="btnNext">
+            <button onclick="changePage(1)" class="pointer-events-auto bg-white text-gray-700 p-2 rounded-full shadow-md border border-gray-200 hover:bg-gray-50 disabled:opacity-0 transition-all" id="btnNext">
                 <i data-lucide="chevron-right" size="24"></i>
             </button>
         </div>
 
-        <!-- 상단 컨트롤 바 (페이지 정보 + 편집 모드) -->
+        <!-- 상단 컨트롤 바 -->
         <div id="page-controls-top" class="absolute top-6 w-full px-6 flex justify-between items-start pointer-events-none z-20 no-print">
-            <!-- 편집 모드 버튼 (왼쪽) -->
+            <!-- 편집 모드 버튼 -->
             <div class="pointer-events-auto relative group">
-                <button id="edit-btn" onclick="toggleEditMode()" class="bg-[#333]/90 text-white p-2 rounded-full shadow-lg border border-[#444] hover:bg-[#444] transition-all">
+                <button id="edit-btn" onclick="toggleEditMode()" class="bg-white text-gray-700 p-2 rounded-full shadow-md border border-gray-200 hover:bg-gray-50 transition-all">
                     <i data-lucide="pencil" size="18"></i>
                 </button>
-                <!-- 툴팁 -->
-                <div class="absolute left-10 top-1 w-48 bg-black/90 text-white text-xs p-2 rounded shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                    <p class="font-bold text-indigo-400 mb-1">편집 모드</p>
-                    <p class="text-gray-300">미리보기 내용을 클릭해 오타를 수정하세요. (설정 변경 시 초기화됨)</p>
+                <div class="absolute left-10 top-1 w-48 bg-white text-gray-700 text-xs p-2 rounded shadow-lg border border-gray-200 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                    <p class="font-bold text-indigo-600 mb-1">편집 모드</p>
+                    <p class="text-gray-500">클릭하여 오타를 수정하세요. (설정 변경 시 초기화됨)</p>
                 </div>
             </div>
 
-            <!-- 페이지 정보 (오른쪽) -->
-            <div class="pointer-events-auto flex items-center gap-3 bg-[#333]/90 text-white px-4 py-2 rounded-full shadow-lg backdrop-blur-md border border-[#444]">
+            <!-- 페이지 정보 -->
+            <div class="pointer-events-auto flex items-center gap-3 bg-white text-gray-700 px-4 py-2 rounded-full shadow-md border border-gray-200">
                 <span class="text-xs font-semibold text-gray-400">PAGE</span>
-                <input type="number" id="pageInput" value="1" min="1" class="w-10 text-center bg-transparent text-white font-bold text-sm outline-none border-b border-gray-500 focus:border-white transition-colors" onchange="jumpToPage(this.value)">
+                <input type="number" id="pageInput" value="1" min="1" class="w-10 text-center bg-transparent font-bold text-sm outline-none border-b border-gray-300 focus:border-indigo-500 transition-colors" onchange="jumpToPage(this.value)">
                 <span class="text-xs text-gray-400" id="totalPageLabel">/ 0</span>
             </div>
         </div>
 
         <!-- 책 렌더링 컨테이너 -->
-        <div id="book-container" class="relative transition-all duration-300 transform scale-95 origin-center shadow-2xl">
-            <div id="placeholder-page" class="book-page active flex flex-col justify-center items-center text-black space-y-4 border border-gray-200">
-                <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center">
-                    <i data-lucide="library" size="40" class="text-gray-400"></i>
+        <div id="book-container" class="relative transition-all duration-300 transform scale-95 origin-center">
+            <div id="placeholder-page" class="book-page active flex flex-col justify-center items-center text-gray-400 border border-gray-200">
+                <div class="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                    <i data-lucide="library" size="40" class="text-gray-300"></i>
                 </div>
                 <div class="text-center">
-                    <p class="text-xl font-bold tracking-tight">리플레이북 만들기</p>
-                    <p class="text-sm mt-2 text-gray-500">HTML 로그 파일을 업로드하면 바로 시작됩니다.</p>
+                    <p class="text-xl font-bold tracking-tight text-gray-600">리플레이북 만들기</p>
+                    <p class="text-sm mt-2 text-gray-400">HTML 로그 파일을 업로드하세요.</p>
                 </div>
             </div>
         </div>
@@ -565,11 +560,12 @@
             state.isEditMode = !state.isEditMode;
             
             if (state.isEditMode) {
-                editBtn.classList.replace('bg-[#333]/90', 'bg-indigo-600');
-                editBtn.classList.replace('text-white', 'text-white');
+                editBtn.classList.replace('bg-white', 'bg-indigo-600');
+                editBtn.classList.replace('text-gray-700', 'text-white');
                 document.body.classList.add('edit-mode-active');
             } else {
-                editBtn.classList.replace('bg-indigo-600', 'bg-[#333]/90');
+                editBtn.classList.replace('bg-indigo-600', 'bg-white');
+                editBtn.classList.replace('text-white', 'text-gray-700');
                 document.body.classList.remove('edit-mode-active');
             }
 
@@ -579,7 +575,6 @@
 
         /* --- 설정 변경 --- */
         function updateToggleUI(groupId, activeValue) {
-            // 간단히 ID로 처리
             if(groupId==='size') {
                 document.getElementById('sizeA5').className = `toggle-btn ${activeValue==='A5'?'active':''}`;
                 document.getElementById('sizeMobile').className = `toggle-btn ${activeValue==='Mobile'?'active':''}`;
@@ -621,7 +616,7 @@
                 root.style.setProperty('--font-size-body', '13pt'); 
                 root.style.setProperty('--line-height-body', '1.55');
                 MAX_CONTENT_HEIGHT_PX = 460; 
-                sizeHelper.innerText = "폰트 13pt / 줄간격 1.55";
+                sizeHelper.innerText = "모바일은 자동으로 뷰어에서 조절됩니다.";
                 injectPrintStyle('108mm 192mm');
             }
             if(mergedLogs.length > 0) reprocessLogs();
@@ -714,7 +709,6 @@
                 if (spans.length >= 3) {
                     let name = spans[1].textContent.trim();
                     
-                    // [수정] 텍스트가 여러 span으로 나뉘어 있을 경우(색상 변경, 괄호 등) 모두 합칩니다.
                     let rawTextParts = [];
                     for (let i = 2; i < spans.length; i++) {
                         rawTextParts.push(spans[i].innerHTML);
@@ -739,17 +733,15 @@
             let currentBlock = null;
 
             parsedLogs.forEach(log => {
-                // Ensure text is always an array for splitting
                 const logTextArray = Array.isArray(log.text) ? log.text : log.text.split('\n');
 
                 if (log.type === 'dice' || log.type === 'system') {
                     if (currentBlock) { mergedLogs.push(currentBlock); currentBlock = null; }
-                    mergedLogs.push({ ...log, text: logTextArray }); // Use array
+                    mergedLogs.push({ ...log, text: logTextArray });
                     return;
                 }
                 
                 if (currentBlock && currentBlock.name === log.name && currentBlock.type === log.type) {
-                    // Merge array
                     currentBlock.text.push(...logTextArray);
                 } else {
                     if (currentBlock) mergedLogs.push(currentBlock);
@@ -783,16 +775,10 @@
                 }
             }
             
-            // Replace <br> generation with block elements logic for better EPUB compatibility
-            // Insert special markers for split
             let processedBody = bodyText.replace(/(\(1D\d+)/g, '||BREAK||$1').replace(/(\d+\s*[＞>]\s*\d+)/g, '||BREAK||$1');
-            
-            // Split into lines
             let lines = processedBody.split('||BREAK||').map(l => l.trim()).filter(l => l);
             
             let html = `<div class="dice-header">${logName}</div>`;
-            
-            // Wrap body lines in divs
             let bodyContent = lines.map(line => `<div class="dice-body-line">${line}</div>`).join('');
             html += `<div class="dice-body">${bodyContent}</div>`;
             
@@ -802,7 +788,6 @@
             return html;
         }
 
-        /* --- 렌더링 (Async) --- */
         function createLogElement(log, isContinuation = false) {
             const div = document.createElement('div');
             div.className = 'log-entry';
@@ -811,10 +796,10 @@
                 const textHtml = log.text.map(t => `<p>${t}</p>`).join('');
                 div.innerHTML = `<div class="narration-box align-${state.narrationAlign} font-${state.fontNarration}">${textHtml}</div>`;
             } else if (log.type === 'dice') {
-                const rawText = log.text.join(' ');
+                const rawText = Array.isArray(log.text) ? log.text.join(' ') : log.text;
                 div.innerHTML = `<div class="dice-container">${formatDiceLog(log.name, rawText)}</div>`;
             } else if (log.type === 'system') {
-                const txt = log.text.join(' ');
+                const txt = Array.isArray(log.text) ? log.text.join(' ') : log.text;
                 div.innerHTML = `<div class="system-box font-sans">${txt}</div>`;
             } else {
                 const textHtml = log.text.map(t => `<p>${t}</p>`).join('');
@@ -881,7 +866,7 @@
                                 currentHeight += totalH;
                                 continue;
                             }
-                            // Smart Split for dialogue and narration
+                            
                             const canSplit = (log.type === 'dialogue' || log.type === 'narration') && log.text.length > 1;
 
                             if (canSplit) {
@@ -896,14 +881,12 @@
                                 const baseStyle = window.getComputedStyle(baseEl);
                                 const baseMargin = parseFloat(baseStyle.marginTop) + parseFloat(baseStyle.marginBottom);
 
-                                // Try adding paragraphs one by one
                                 while(remainText.length > 0) {
                                     let nextParaText = remainText[0];
                                     let p = document.createElement('p');
                                     p.textContent = nextParaText;
                                     textBox.appendChild(p);
                                     
-                                    // Check height with new paragraph
                                     if (currentHeight + baseEl.offsetHeight + baseMargin <= MAX_CONTENT_HEIGHT_PX) {
                                         fitText.push(remainText.shift());
                                         canFitAny = true;
@@ -917,22 +900,17 @@
                                 if (canFitAny && fitText.length > 0) {
                                     let fitLog = { ...log, text: fitText };
                                     pageContent.appendChild(createLogElement(fitLog, log.isContinuation));
-                                    
                                     bookContainer.appendChild(currentPageDiv);
                                     totalPages++;
-                                    
                                     currentPageDiv = createNewPage();
                                     addPageNumber(currentPageDiv, totalPages + 1);
                                     pageContent = currentPageDiv.querySelector('.page-content');
                                     currentHeight = 0;
-                                    
                                     if (remainText.length > 0) {
-                                        // Put remainder back to queue
                                         queue.unshift({ ...log, text: remainText, isContinuation: true });
                                         initialTotal++; 
                                     }
                                 } else {
-                                    // Can't fit even one paragraph -> Next page
                                     bookContainer.appendChild(currentPageDiv);
                                     totalPages++;
                                     currentPageDiv = createNewPage();
@@ -942,7 +920,6 @@
                                     queue.unshift(log); 
                                 }
                             } else {
-                                // Can't split (single block) -> Next page
                                 bookContainer.appendChild(currentPageDiv);
                                 totalPages++;
                                 currentPageDiv = createNewPage();
@@ -1024,7 +1001,6 @@
         // Init
         setPageSize('A5');
 
-        // Fallback for saveAs if FileSaver fails to load
         function saveFile(blob, fileName) {
             if (window.saveAs) {
                 window.saveAs(blob, fileName);
@@ -1074,9 +1050,7 @@
             
             mergedLogs.forEach(log => {
                 let innerHTML = "";
-                // Use array to generate p tags for EPUB
                 const textArray = Array.isArray(log.text) ? log.text : [log.text];
-                // IMPORTANT FIX: Join with newline character to ensure source code separation
                 const textParagraphs = textArray.map(t => `<p>${t}</p>`).join('\n');
 
                 if (log.type === 'narration') {
@@ -1109,5 +1083,4 @@
         }
     </script>
 </body>
-
 </html>
