@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TRPG 리플레이북 변환기 (v10.2 EPUB Fix)</title>
+    
+    <!-- 1. 폰트 로드 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/gh/moonspam/NanumSquare@2.0/nanumsquare.css">
+    
+    <!-- 아이콘 -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- 라이브러리 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    
+    <!-- 스타일 (Tailwind) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        @font-face {
+            font-family: 'GounBatang';
+            src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2108@1.1/GowunBatang-Regular.woff') format('woff');
+            font-weight: normal;
+            font-display: swap;
+        }
+        @font-face {
+            font-family: 'GounBatang';
+            src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2108@1.1/GowunBatang-Bold.woff') format('woff');
+            font-weight: 700;
+            font-display: swap;
+        }
+
+        :root {
+            --font-serif: 'GounBatang', serif;
+            --font-sans: 'NanumSquare', sans-serif;
+            --font-mono: 'Courier Prime', monospace;
+            
+            /* 기본값 A5 */
+            --page-width: 148mm;
+            --page-height: 210mm;
+            --margin-top: 20mm;
+            --margin-inner: 20mm; 
+            --margin-outer: 15mm;
+            --margin-bottom: 25mm; 
+            --content-height: 165mm; 
+
+            /* 폰트/줄간격 (JS 제어) */
+            --font-size-body: 10.5pt;
+            --line-height-body: 1.6;
+        }
+
+        body { background-color: #1a1a1a; color: #e5e5e5; font-family: var(--font-sans); }
+
+        /* 스크롤바 */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #2a2a2a; }
+        ::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #777; }
+
+        /* 사이드바 */
+        #sidebar { background: #252525; border-right: 1px solid #333; }
+        .sidebar-header { border-bottom: 1px solid #333; background: #252525; }
+        .sidebar-section-title {
+            color: #888; font-size: 0.75rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.05em;
+            padding-bottom: 0.5rem; margin-bottom: 0.75rem;
+            border-bottom: 1px solid #333;
+            display: flex; align-items: center; gap: 0.5rem;
+        }
+        
+        .custom-input {
+            width: 100%; background: #333; border: 1px solid #444;
+            color: #fff; padding: 0.5rem; border-radius: 4px;
+            font-size: 0.85rem; outline: none; transition: border-color 0.2s;
+        }
+        .custom-input:focus { border-color: #666; }
+        
+        .input-helper { font-size: 0.7rem; color: #666; margin-top: 2px; margin-bottom: 6px; }
+        
+        .toggle-btn-group { display: flex; background: #333; border-radius: 4px; padding: 2px; }
+        .toggle-btn {
+            flex: 1; padding: 4px 0; text-align: center;
+            font-size: 0.75rem; border-radius: 3px;
+            transition: all 0.2s; color: #888;
+        }
+        .toggle-btn.active { background: #555; color: #fff; font-weight: 600; }
+        .toggle-btn:hover:not(.active) { color: #ccc; }
+
+        .input-group label { display: block; font-size: 0.75rem; color: #aaa; margin-bottom: 0.25rem; }
+
+        /* 책 페이지 (그림자 제거됨) */
+        .book-page {
+            width: var(--page-width); height: var(--page-height);
+            background: white; box-sizing: border-box;
+            position: relative; overflow: hidden; margin: 0 auto;
+            /* box-shadow 제거 */
+            box-shadow: none; 
+            /* 화면상 구분을 위한 미세한 테두리만 남김 (인쇄시는 사라짐) */
+            border: 1px solid #e5e5e5;
+            display: none; 
+            padding: var(--margin-top) var(--margin-outer) var(--margin-bottom) var(--margin-inner);
+            color: #222; /* 완전 검정보다 눈이 편한 진한 회색 */
+            transform-origin: center top;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        .book-page.active { display: block; }
+        .book-page.cover-page { padding: 0 !important; }
+
+        .page-number {
+            position: absolute; bottom: 12mm; left: 0; width: 100%;
+            text-align: center; font-size: 9pt; color: #555;
+            font-family: var(--font-sans); font-weight: 500; z-index: 50;
+        }
+
+        .page-content {
+            height: var(--content-height); overflow: hidden;
+            display: flex; flex-direction: column; align-items: stretch;
+        }
+
+        /* 오버레이 (로딩/모달) */
+        .overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.8);
+            z-index: 100; display: none;
+            justify-content: center; align-items: center;
+            backdrop-filter: blur(5px);
+        }
+        .progress-bar-container {
+            width: 100%; max-width: 300px; height: 6px;
+            background-color: #444; border-radius: 9999px;
+            overflow: hidden; margin-top: 15px;
+        }
+        .progress-bar-fill {
+            height: 100%; background-color: #6366f1; width: 0%;
+            transition: width 0.1s linear;
+        }
+
+        /* EPUB 모달 */
+        .modal-box {
+            background: #252525; border: 1px solid #444;
+            padding: 24px; border-radius: 12px; width: 320px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+        }
+
+        /* 편집 모드 */
+        [contenteditable="true"] { outline: 1px dashed transparent; cursor: text; transition: all 0.2s; }
+        body.edit-mode-active [contenteditable="true"]:hover,
+        body.edit-mode-active [contenteditable="true"]:focus {
+            outline: 1px dashed #6366f1; background-color: rgba(99, 102, 241, 0.05); border-radius: 2px;
+        }
+
+        /* 인쇄 모드 */
+        @media print {
+            @page { margin: 0; }
+            body { background: white; margin: 0; }
+            #sidebar, #preview-controls, .no-print, .overlay, #page-controls-top { display: none !important; }
+            #main-content { display: block; padding: 0; height: auto; overflow: visible; background: transparent; width: 100%; }
+            [contenteditable="true"] { outline: none !important; background: none !important; }
+            .book-page {
+                display: block !important; margin: 0 !important;
+                box-shadow: none !important; border: none !important;
+                break-after: page; page-break-after: always;
+                width: 100% !important; height: 100% !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            .book-page:last-child { break-after: auto; }
+        }
+
+        /* 로그 스타일 (Eco & Aesthetic) */
+        .font-serif { font-family: var(--font-serif) !important; }
+        .font-sans { font-family: var(--font-sans) !important; }
+        
+        .log-entry { margin-bottom: 1.2rem; break-inside: avoid; }
+        
+        .dialogue-box { display: flex; flex-direction: column; gap: 2px; }
+        .dialogue-box .char-name {
+            font-size: 9pt; font-weight: 700; color: #111;
+            margin-left: 2px; margin-bottom: 2px; display: flex; align-items: center; gap: 6px;
+        }
+        /* 이름 장식: 작은 점 (잉크 절약) */
+        .dialogue-box .char-name::before {
+            content: ''; display: block; width: 3px; height: 3px;
+            background-color: #333; border-radius: 50%;
+        }
+
+        .dialogue-box.layout-side { 
+            flex-direction: row; 
+            gap: 12px; 
+            align-items: flex-start;
+        }
+        .dialogue-box.layout-side .char-name {
+            width: 24mm; 
+            flex-shrink: 0;
+            text-align: left; 
+            justify-content: flex-start;
+            margin: 0;
+            padding-right: 8px;
+            border-right: 1px solid #ccc; /* 얇은 회색 선 */
+            font-size: 9pt;
+        }
+        .dialogue-box.layout-side .char-name::before { display: none; } 
+        .dialogue-box.layout-side .dialogue-text { flex: 1; padding-left: 0; }
+        
+        .dialogue-text {
+            line-height: var(--line-height-body); font-size: var(--font-size-body);
+            color: #222; padding-left: 2px; text-align: justify;
+        }
+        .dialogue-text p { margin: 0; text-indent: 0; } 
+        .dialogue-text p + p { margin-top: 0.2em; }
+
+        .narration-box {
+            color: #333; padding: 0.5rem 0; margin: 0.8rem 0;
+            line-height: var(--line-height-body); font-size: var(--font-size-body);
+            position: relative;
+        }
+        .narration-box.align-center { text-align: center; }
+        .narration-box.align-left { text-align: left; padding-left: 0; border-left: none; }
+        
+        /* 주사위 판정 (그림자 제거됨) */
+        .dice-container {
+            border: 1px solid #999; /* 진한 회색 테두리 */
+            border-radius: 4px;
+            margin: 14px auto; 
+            width: 85%; 
+            overflow: hidden;
+            font-size: 9pt;
+            background: #fff; /* 흰색 배경 */
+            color: #000;
+            break-inside: avoid;
+            box-shadow: none; /* 그림자 완전 제거 */
+        }
+        .dice-header {
+            background: transparent; /* 배경색 제거 */
+            padding: 6px 12px;
+            border-bottom: 1px solid #ddd; /* 연한 구분선 */
+            font-weight: 700; 
+            font-family: var(--font-sans);
+            color: #444;
+            font-size: 9pt;
+            text-align: center;
+            letter-spacing: 0.05em;
+        }
+        .dice-body {
+            padding: 10px 12px;
+            font-family: 'Courier Prime', 'NanumSquare', monospace;
+            line-height: 1.6;
+            font-size: 9.5pt;
+            color: #111;
+            text-align: center;
+        }
+        /* 결과값: 반전 대신 테두리 박스로 강조 */
+        .dice-result {
+            display: inline-block; /* 글자 크기에 맞게 */
+            margin: 0 auto 10px auto; /* 중앙 정렬 */
+            padding: 4px 12px;
+            text-align: center;
+            font-weight: 700;
+            background: #fff; 
+            color: #000;
+            border: 1px solid #000; /* 검은 테두리 */
+            border-radius: 12px; /* 둥근 뱃지 */
+            font-family: var(--font-sans);
+            font-size: 10pt;
+        }
+        /* 결과값을 감싸는 부모 컨테이너 (중앙 정렬용) */
+        .dice-result-wrapper {
+            text-align: center;
+            padding-bottom: 8px;
+        }
+
+        /* 시스템 메시지 (주석 스타일) */
+        .system-box {
+            font-size: 9.5pt; color: #555; text-align: center;
+            border-top: 1px double #ccc; /* 이중선 */
+            border-bottom: 1px double #ccc;
+            padding: 4px 0; margin: 12px 0; 
+            font-family: var(--font-mono);
+        }
+
+        .cover-image { width: 100%; height: 100%; object-fit: cover; filter: grayscale(100%); }
+        
+        #measure-container { 
+            position: absolute; top: -9999px; left: -9999px; 
+            width: calc(var(--page-width) - var(--margin-outer) - var(--margin-inner)); 
+            visibility: hidden; box-sizing: border-box; font-family: var(--font-sans); 
+        }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden">
+
+    <!-- 로딩 오버레이 -->
+    <div id="loading-overlay" class="overlay flex-col" style="display: none;">
+        <div class="text-white text-xl font-bold flex items-center gap-3">
+            <i data-lucide="loader-2" class="animate-spin"></i>
+            변환 중...
+        </div>
+        <div class="progress-bar-container">
+            <div id="progress-bar" class="progress-bar-fill"></div>
+        </div>
+        <div id="loading-text" class="text-gray-400 text-sm mt-3 font-mono">준비 중...</div>
+    </div>
+
+    <!-- EPUB 정보 모달 -->
+    <div id="epub-modal" class="overlay" style="display: none;">
+        <div class="modal-box">
+            <h2 class="text-white font-bold mb-4 flex items-center gap-2">
+                <i data-lucide="book-open" size="18"></i> EPUB 정보 입력
+            </h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">책 제목</label>
+                    <input type="text" id="modal-title" class="custom-input" value="TRPG Replay Log">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">저자</label>
+                    <input type="text" id="modal-author" class="custom-input" value="Unknown">
+                </div>
+                <div class="flex gap-2 mt-6">
+                    <button onclick="closeEpubModal()" class="flex-1 py-2 rounded bg-gray-700 text-white text-sm hover:bg-gray-600">취소</button>
+                    <button onclick="startEpubExport()" class="flex-1 py-2 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-500 font-bold">저장</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 사이드바 -->
+    <aside id="sidebar" class="w-80 flex flex-col z-20 shadow-2xl">
+        <div class="sidebar-header p-5">
+            <h1 class="text-lg font-bold flex items-center gap-2 text-white">
+                <i data-lucide="book-template" class="text-gray-400"></i> 
+                TRPG 리플레이북
+            </h1>
+            <p class="text-xs text-gray-500 mt-1">HTML 로그 변환기 v10.2</p>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-5 space-y-6">
+            
+            <div class="input-group">
+                <div class="sidebar-section-title">
+                    <i data-lucide="folder-open" size="14"></i> 파일 불러오기
+                </div>
+                <div class="mb-4">
+                    <label>표지 이미지 (선택)</label>
+                    <input type="file" id="coverInput" accept="image/*" class="custom-input"/>
+                    <p class="input-helper">권장: A5(1748x2480) / 모바일(1080x1920)</p>
+                </div>
+                <div>
+                    <label>CCfolia 로그 (.html)</label>
+                    <input type="file" id="htmlInput" accept=".html" class="custom-input"/>
+                    <p class="input-helper">코코포리아에서 내보낸 HTML 파일</p>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <div class="sidebar-section-title">
+                    <i data-lucide="settings-2" size="14"></i> 설정
+                </div>
+                <div class="mb-4">
+                    <label>용지 크기 & 폰트</label>
+                    <div class="toggle-btn-group">
+                        <button id="sizeA5" class="toggle-btn active" onclick="setPageSize('A5')">A5 (책)</button>
+                        <button id="sizeMobile" class="toggle-btn" onclick="setPageSize('Mobile')">모바일</button>
+                    </div>
+                    <p class="input-helper" id="sizeHelperText">
+                        폰트 10.5pt / 줄간격 1.6
+                    </p>
+                </div>
+                <div class="mb-4">
+                    <label>나레이션(지문) 화자 이름</label>
+                    <input type="text" id="narratorNameInput" placeholder="예: GM, system, ::" class="custom-input" onchange="reprocessLogs()">
+                </div>
+                <div class="mb-4">
+                    <label>대사 레이아웃</label>
+                    <div class="toggle-btn-group">
+                        <button id="layoutVertical" class="toggle-btn active" onclick="setLayout('vertical')">상하(기본)</button>
+                        <button id="layoutSide" class="toggle-btn" onclick="setLayout('side')">좌우(대본)</button>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label>지문 정렬</label>
+                    <div class="toggle-btn-group">
+                        <button id="alignLeft" class="toggle-btn" onclick="setNarrationAlign('left')">왼쪽</button>
+                        <button id="alignCenter" class="toggle-btn active" onclick="setNarrationAlign('center')">가운데</button>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label>대사 / 지문 폰트</label>
+                    <div class="flex flex-col gap-2">
+                        <div class="toggle-btn-group">
+                            <button id="diaSerif" class="toggle-btn" onclick="setFont('dialogue', 'serif')">대사 명조</button>
+                            <button id="diaSans" class="toggle-btn active" onclick="setFont('dialogue', 'sans')">대사 고딕</button>
+                        </div>
+                        <div class="toggle-btn-group">
+                            <button id="narSerif" class="toggle-btn active" onclick="setFont('narration', 'serif')">지문 명조</button>
+                            <button id="narSans" class="toggle-btn" onclick="setFont('narration', 'sans')">지문 고딕</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-5 border-t border-[#333] bg-[#252525] flex flex-col gap-3">
+            <button onclick="window.print()" class="w-full flex justify-center items-center gap-2 bg-white hover:bg-gray-200 text-black font-bold py-3 px-4 rounded transition-all active:scale-95 shadow-lg">
+                <i data-lucide="printer" size="18"></i> PDF 저장
+            </button>
+            <button onclick="openEpubModal()" class="w-full flex justify-center items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded transition-all active:scale-95 shadow-lg">
+                <i data-lucide="book-down" size="18"></i> EPUB 저장
+            </button>
+        </div>
+    </aside>
+
+    <!-- 메인 뷰어 -->
+    <main id="main-content" class="flex-1 flex flex-col justify-center items-center relative overflow-hidden bg-[#1a1a1a]">
+        
+        <!-- 네비게이션 -->
+        <div id="preview-controls" class="absolute inset-0 pointer-events-none flex justify-between items-center px-4 md:px-16 z-10 no-print">
+            <button onclick="changePage(-1)" class="pointer-events-auto bg-[#333]/80 text-white p-3 rounded-full hover:bg-[#555] disabled:opacity-0 transition-all backdrop-blur-sm" id="btnPrev">
+                <i data-lucide="chevron-left" size="24"></i>
+            </button>
+            <button onclick="changePage(1)" class="pointer-events-auto bg-[#333]/80 text-white p-3 rounded-full hover:bg-[#555] disabled:opacity-0 transition-all backdrop-blur-sm" id="btnNext">
+                <i data-lucide="chevron-right" size="24"></i>
+            </button>
+        </div>
+
+        <!-- 상단 컨트롤 바 (페이지 정보 + 편집 모드) -->
+        <div id="page-controls-top" class="absolute top-6 w-full px-6 flex justify-between items-start pointer-events-none z-20 no-print">
+            <!-- 편집 모드 버튼 (왼쪽) -->
+            <div class="pointer-events-auto relative group">
+                <button id="edit-btn" onclick="toggleEditMode()" class="bg-[#333]/90 text-white p-2 rounded-full shadow-lg border border-[#444] hover:bg-[#444] transition-all">
+                    <i data-lucide="pencil" size="18"></i>
+                </button>
+                <!-- 툴팁 -->
+                <div class="absolute left-10 top-1 w-48 bg-black/90 text-white text-xs p-2 rounded shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                    <p class="font-bold text-indigo-400 mb-1">편집 모드</p>
+                    <p class="text-gray-300">미리보기 내용을 클릭해 오타를 수정하세요. (설정 변경 시 초기화됨)</p>
+                </div>
+            </div>
+
+            <!-- 페이지 정보 (오른쪽) -->
+            <div class="pointer-events-auto flex items-center gap-3 bg-[#333]/90 text-white px-4 py-2 rounded-full shadow-lg backdrop-blur-md border border-[#444]">
+                <span class="text-xs font-semibold text-gray-400">PAGE</span>
+                <input type="number" id="pageInput" value="1" min="1" class="w-10 text-center bg-transparent text-white font-bold text-sm outline-none border-b border-gray-500 focus:border-white transition-colors" onchange="jumpToPage(this.value)">
+                <span class="text-xs text-gray-400" id="totalPageLabel">/ 0</span>
+            </div>
+        </div>
+
+        <!-- 책 렌더링 컨테이너 -->
+        <div id="book-container" class="relative transition-all duration-300 transform scale-95 origin-center shadow-2xl">
+            <div id="placeholder-page" class="book-page active flex flex-col justify-center items-center text-black space-y-4 border border-gray-200">
+                <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center">
+                    <i data-lucide="library" size="40" class="text-gray-400"></i>
+                </div>
+                <div class="text-center">
+                    <p class="text-xl font-bold tracking-tight">리플레이북 만들기</p>
+                    <p class="text-sm mt-2 text-gray-500">HTML 로그 파일을 업로드하면 바로 시작됩니다.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 측정용 Hidden Div -->
+        <div id="measure-container"></div>
+    </main>
+
+    <script>
+        lucide.createIcons();
+
+        /* --- 상태 관리 --- */
+        const state = {
+            pageSize: 'A5', 
+            layout: 'vertical', 
+            narrationAlign: 'center',
+            fontDialogue: 'sans', 
+            fontNarration: 'serif',
+            isEditMode: false
+        };
+
+        const htmlInput = document.getElementById('htmlInput');
+        const coverInput = document.getElementById('coverInput');
+        const narratorInput = document.getElementById('narratorNameInput');
+        const bookContainer = document.getElementById('book-container');
+        const measureContainer = document.getElementById('measure-container');
+        const pageInput = document.getElementById('pageInput');
+        const totalPageLabel = document.getElementById('totalPageLabel');
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const progressBar = document.getElementById('progress-bar');
+        const loadingText = document.getElementById('loading-text');
+        const editBtn = document.getElementById('edit-btn');
+        const epubModal = document.getElementById('epub-modal');
+        
+        let currentCoverData = null;
+        let rawHtmlContent = "";
+        let parsedLogs = [];
+        let mergedLogs = [];
+        let currentPageIndex = 0;
+        let totalPages = 0;
+        let MAX_CONTENT_HEIGHT_PX = 525; 
+
+        /* --- 키보드 & 마우스 휠 이벤트 --- */
+        function isOverlayVisible() {
+            return loadingOverlay.style.display !== 'none' || epubModal.style.display !== 'none';
+        }
+        function isInputFocused() {
+            const el = document.activeElement;
+            return el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (!state.isEditMode && !isOverlayVisible() && !isInputFocused()) {
+                if (e.key === 'ArrowLeft') changePage(-1);
+                else if (e.key === 'ArrowRight') changePage(1);
+            }
+        });
+
+        let isScrolling = false;
+        document.addEventListener('wheel', (e) => {
+            if (state.isEditMode || isOverlayVisible() || isInputFocused()) return;
+            if (isScrolling) return;
+            
+            if (e.deltaY > 50) { changePage(1); isScrolling = true; } 
+            else if (e.deltaY < -50) { changePage(-1); isScrolling = true; }
+
+            if (isScrolling) setTimeout(() => { isScrolling = false; }, 400);
+        });
+
+        /* --- 로딩 UI --- */
+        function showLoading(show, message="변환 중...") {
+            loadingOverlay.style.display = show ? 'flex' : 'none';
+            if (show) {
+                loadingText.innerText = message;
+                updateLoading(0, 0);
+            }
+        }
+
+        function updateLoading(percent, pageCount) {
+            progressBar.style.width = `${percent}%`;
+            if (pageCount !== undefined && pageCount !== null) {
+                loadingText.innerText = `진행률: ${percent}% (생성된 페이지: ${pageCount})`;
+            }
+        }
+
+        /* --- EPUB 모달 --- */
+        function openEpubModal() {
+            if (mergedLogs.length === 0) {
+                alert("로그 파일을 먼저 불러와주세요.");
+                return;
+            }
+            epubModal.style.display = 'flex';
+        }
+        function closeEpubModal() {
+            epubModal.style.display = 'none';
+        }
+        function startEpubExport() {
+            closeEpubModal();
+            exportEPUB();
+        }
+
+        /* --- 편집 모드 토글 --- */
+        function toggleEditMode() {
+            state.isEditMode = !state.isEditMode;
+            
+            if (state.isEditMode) {
+                editBtn.classList.replace('bg-[#333]/90', 'bg-indigo-600');
+                editBtn.classList.replace('text-white', 'text-white');
+                document.body.classList.add('edit-mode-active');
+            } else {
+                editBtn.classList.replace('bg-indigo-600', 'bg-[#333]/90');
+                document.body.classList.remove('edit-mode-active');
+            }
+
+            const editables = bookContainer.querySelectorAll('.char-name, .dialogue-text, .narration-box, .dice-line, .dice-body, .dice-result, .system-box');
+            editables.forEach(el => el.contentEditable = state.isEditMode);
+        }
+
+        /* --- 설정 변경 --- */
+        function updateToggleUI(groupId, activeValue) {
+            // 간단히 ID로 처리
+            if(groupId==='size') {
+                document.getElementById('sizeA5').className = `toggle-btn ${activeValue==='A5'?'active':''}`;
+                document.getElementById('sizeMobile').className = `toggle-btn ${activeValue==='Mobile'?'active':''}`;
+            } else if(groupId==='layout') {
+                document.getElementById('layoutVertical').className = `toggle-btn ${activeValue==='vertical'?'active':''}`;
+                document.getElementById('layoutSide').className = `toggle-btn ${activeValue==='side'?'active':''}`;
+            } else if(groupId==='align') {
+                document.getElementById('alignLeft').className = `toggle-btn ${activeValue==='left'?'active':''}`;
+                document.getElementById('alignCenter').className = `toggle-btn ${activeValue==='center'?'active':''}`;
+            } else if(groupId==='dia') {
+                document.getElementById('diaSerif').className = `toggle-btn ${activeValue==='serif'?'active':''}`;
+                document.getElementById('diaSans').className = `toggle-btn ${activeValue==='sans'?'active':''}`;
+            } else if(groupId==='nar') {
+                document.getElementById('narSerif').className = `toggle-btn ${activeValue==='serif'?'active':''}`;
+                document.getElementById('narSans').className = `toggle-btn ${activeValue==='sans'?'active':''}`;
+            }
+        }
+
+        function setPageSize(size) {
+            state.pageSize = size;
+            updateToggleUI('size', size);
+            
+            const root = document.documentElement;
+            const sizeHelper = document.getElementById('sizeHelperText');
+
+            if (size === 'A5') {
+                root.style.setProperty('--page-width', '148mm');
+                root.style.setProperty('--page-height', '210mm');
+                root.style.setProperty('--content-height', '165mm');
+                root.style.setProperty('--font-size-body', '10.5pt');
+                root.style.setProperty('--line-height-body', '1.6');
+                MAX_CONTENT_HEIGHT_PX = 525; 
+                sizeHelper.innerText = "폰트 10.5pt / 줄간격 1.6";
+                injectPrintStyle('A5');
+            } else {
+                root.style.setProperty('--page-width', '108mm');
+                root.style.setProperty('--page-height', '192mm');
+                root.style.setProperty('--content-height', '147mm'); 
+                root.style.setProperty('--font-size-body', '13pt'); 
+                root.style.setProperty('--line-height-body', '1.55');
+                MAX_CONTENT_HEIGHT_PX = 460; 
+                sizeHelper.innerText = "폰트 13pt / 줄간격 1.55";
+                injectPrintStyle('108mm 192mm');
+            }
+            if(mergedLogs.length > 0) reprocessLogs();
+        }
+
+        function injectPrintStyle(size) {
+            document.getElementById('print-style')?.remove();
+            const style = document.createElement('style');
+            style.id = 'print-style';
+            if (size === 'A5') style.innerHTML = `@media print { @page { size: A5; margin: 0; } }`;
+            else style.innerHTML = `@media print { @page { size: ${size}; margin: 0; } }`;
+            document.head.appendChild(style);
+        }
+
+        function setLayout(mode) {
+            state.layout = mode;
+            updateToggleUI('layout', mode);
+            if(mergedLogs.length > 0) reprocessLogs();
+        }
+        function setNarrationAlign(align) {
+            state.narrationAlign = align;
+            updateToggleUI('align', align);
+            if(mergedLogs.length > 0) reprocessLogs();
+        }
+        function setFont(target, type) {
+            if (target === 'dialogue') {
+                state.fontDialogue = type;
+                updateToggleUI('dia', type);
+            } else if (target === 'narration') {
+                state.fontNarration = type;
+                updateToggleUI('nar', type);
+            }
+            if(mergedLogs.length > 0) reprocessLogs();
+        }
+
+        /* --- 파일 처리 --- */
+        coverInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    currentCoverData = e.target.result;
+                    reprocessLogs();
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        htmlInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                rawHtmlContent = e.target.result;
+                reprocessLogs();
+            };
+            reader.readAsText(file);
+        });
+
+        function reprocessLogs() {
+            if (!rawHtmlContent) return;
+            if (state.isEditMode) {
+                editModeToggle.checked = false;
+                toggleEditMode();
+            }
+            showLoading(true);
+            setTimeout(() => { parseLog(rawHtmlContent); }, 50);
+        }
+
+        /* --- 파싱 --- */
+        const STRICT_DICE_PATTERNS = [ /CC\(\d+\)/i, /CC<=\d+/i, /\d+D\d+/i, /choice\[/i, /\d+\s*>\s*\d+/, /\d+\s*＞\s*\d+/ ];
+
+        function getLogType(name, text, customNarrator) {
+            const cleanName = name ? name.trim() : "";
+            if (!cleanName || cleanName === '::' || cleanName === customNarrator) return 'narration';
+            if (STRICT_DICE_PATTERNS.some(p => p.test(text))) return 'dice';
+            if (cleanName.toLowerCase() === 'system' || cleanName.toLowerCase() === 'main') return 'system';
+            return 'dialogue';
+        }
+
+        function parseLog(htmlContent) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(htmlContent, 'text/html');
+            const paragraphs = doc.querySelectorAll('p');
+            const customNarrator = narratorInput.value.trim();
+            parsedLogs = [];
+
+            paragraphs.forEach(p => {
+                const spans = p.querySelectorAll('span');
+                if (spans.length >= 3) {
+                    let name = spans[1].textContent.trim();
+                    
+                    // [수정] 텍스트가 여러 span으로 나뉘어 있을 경우(색상 변경, 괄호 등) 모두 합칩니다.
+                    let rawTextParts = [];
+                    for (let i = 2; i < spans.length; i++) {
+                        rawTextParts.push(spans[i].innerHTML);
+                    }
+                    let joinedText = rawTextParts.join('');
+
+                    let text = joinedText.trim().replace(/<br\s*\/?>/gi, '\n'); 
+                    let tempDiv = document.createElement("div");
+                    tempDiv.innerHTML = text;
+                    text = tempDiv.textContent || tempDiv.innerText || "";
+                    
+                    let type = getLogType(name, text, customNarrator);
+                    parsedLogs.push({ type, name, text });
+                }
+            });
+            mergeLogs();
+        }
+
+        function mergeLogs() {
+            mergedLogs = [];
+            if (parsedLogs.length === 0) { showLoading(false); return; }
+            let currentBlock = null;
+
+            parsedLogs.forEach(log => {
+                // Ensure text is always an array for splitting
+                const logTextArray = Array.isArray(log.text) ? log.text : log.text.split('\n');
+
+                if (log.type === 'dice' || log.type === 'system') {
+                    if (currentBlock) { mergedLogs.push(currentBlock); currentBlock = null; }
+                    mergedLogs.push({ ...log, text: logTextArray }); // Use array
+                    return;
+                }
+                
+                if (currentBlock && currentBlock.name === log.name && currentBlock.type === log.type) {
+                    // Merge array
+                    currentBlock.text.push(...logTextArray);
+                } else {
+                    if (currentBlock) mergedLogs.push(currentBlock);
+                    currentBlock = { type: log.type, name: log.name, text: logTextArray };
+                }
+            });
+            if (currentBlock) mergedLogs.push(currentBlock);
+            renderPaginatedBookAsync();
+        }
+
+        function formatDiceLog(logName, text) {
+            const resultKeywords = ["보통 성공", "어려운 성공", "대단한 성공", "대성공", "대실패", "실패", "Success", "Failure", "Critical", "Fumble"];
+            let resultLine = "";
+            let bodyText = text;
+
+            for (let kw of resultKeywords) {
+                const regex = new RegExp(`(＞|>)s*${kw}\\s*$`, 'i');
+                const match = text.match(regex);
+                if (!match) {
+                     const regex2 = new RegExp(`${kw}\\s*$`, 'i');
+                     const match2 = text.match(regex2);
+                     if(match2) {
+                         resultLine = match2[0];
+                         bodyText = text.substring(0, text.lastIndexOf(resultLine));
+                         break;
+                     }
+                } else {
+                    resultLine = match[0].replace('＞', '').replace('>', '').trim();
+                    bodyText = text.substring(0, text.lastIndexOf(match[0]));
+                    break;
+                }
+            }
+            
+            // Replace <br> generation with block elements logic for better EPUB compatibility
+            // Insert special markers for split
+            let processedBody = bodyText.replace(/(\(1D\d+)/g, '||BREAK||$1').replace(/(\d+\s*[＞>]\s*\d+)/g, '||BREAK||$1');
+            
+            // Split into lines
+            let lines = processedBody.split('||BREAK||').map(l => l.trim()).filter(l => l);
+            
+            let html = `<div class="dice-header">${logName}</div>`;
+            
+            // Wrap body lines in divs
+            let bodyContent = lines.map(line => `<div class="dice-body-line">${line}</div>`).join('');
+            html += `<div class="dice-body">${bodyContent}</div>`;
+            
+            if (resultLine) {
+                html += `<div class="dice-result-wrapper"><span class="dice-result">${resultLine}</span></div>`;
+            }
+            return html;
+        }
+
+        /* --- 렌더링 (Async) --- */
+        function createLogElement(log, isContinuation = false) {
+            const div = document.createElement('div');
+            div.className = 'log-entry';
+
+            if (log.type === 'narration') {
+                const textHtml = log.text.map(t => `<p>${t}</p>`).join('');
+                div.innerHTML = `<div class="narration-box align-${state.narrationAlign} font-${state.fontNarration}">${textHtml}</div>`;
+            } else if (log.type === 'dice') {
+                const rawText = log.text.join(' ');
+                div.innerHTML = `<div class="dice-container">${formatDiceLog(log.name, rawText)}</div>`;
+            } else if (log.type === 'system') {
+                const txt = log.text.join(' ');
+                div.innerHTML = `<div class="system-box font-sans">${txt}</div>`;
+            } else {
+                const textHtml = log.text.map(t => `<p>${t}</p>`).join('');
+                const displayName = log.name; 
+                const layoutClass = state.layout === 'side' ? 'layout-side' : '';
+                div.innerHTML = `<div class="dialogue-box ${layoutClass}"><span class="char-name font-sans">${displayName}</span><div class="dialogue-text font-${state.fontDialogue}">${textHtml}</div></div>`;
+            }
+            lucide.createIcons({ root: div });
+            if (state.isEditMode) {
+                const editables = div.querySelectorAll('.char-name, .dialogue-text, .narration-box, .dice-line, .dice-body, .dice-result, .system-box');
+                editables.forEach(el => el.contentEditable = true);
+            }
+            return div;
+        }
+
+        async function renderPaginatedBookAsync() {
+            bookContainer.innerHTML = '';
+            totalPages = 0;
+            
+            if (currentCoverData) {
+                const coverPage = document.createElement('div');
+                coverPage.className = 'book-page cover-page'; 
+                coverPage.innerHTML = `<img src="${currentCoverData}" class="cover-image">`;
+                bookContainer.appendChild(coverPage);
+                totalPages++; 
+            } else {
+                const titlePage = document.createElement('div');
+                titlePage.className = 'book-page';
+                titlePage.innerHTML = `<div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%;"><h1 class="font-serif text-3xl font-bold mb-4 border-b-2 border-black pb-2">LOG BOOK</h1><h2 class="font-sans text-sm text-black tracking-widest">TRPG REPLAY ARCHIVE</h2></div>`;
+                bookContainer.appendChild(titlePage);
+                totalPages++;
+            }
+
+            let currentPageDiv = createNewPage();
+            addPageNumber(currentPageDiv, totalPages + 1); 
+            let pageContent = currentPageDiv.querySelector('.page-content');
+            let currentHeight = 0;
+
+            let queue = [...mergedLogs];
+            let completedCount = 0;
+            let initialTotal = queue.length; 
+
+            const processChunk = () => {
+                return new Promise((resolve) => {
+                    const startTime = Date.now();
+                    while (queue.length > 0 && Date.now() - startTime < 15) {
+                        const log = queue.shift();
+                        completedCount++; 
+                        
+                        let tempEl = createLogElement(log, log.isContinuation);
+                        measureContainer.appendChild(tempEl);
+                        
+                        const style = window.getComputedStyle(tempEl);
+                        const margin = parseFloat(style.marginTop) + parseFloat(style.marginBottom);
+                        let totalH = tempEl.offsetHeight + margin;
+                        measureContainer.removeChild(tempEl);
+
+                        if (currentHeight + totalH <= MAX_CONTENT_HEIGHT_PX) {
+                            pageContent.appendChild(tempEl); 
+                            currentHeight += totalH;
+                        } else {
+                            if (currentHeight === 0) {
+                                pageContent.appendChild(tempEl);
+                                currentHeight += totalH;
+                                continue;
+                            }
+                            // Smart Split for dialogue and narration
+                            const canSplit = (log.type === 'dialogue' || log.type === 'narration') && log.text.length > 1;
+
+                            if (canSplit) {
+                                let fitText = [];
+                                let remainText = [...log.text];
+                                let canFitAny = false;
+                                let baseLog = { ...log, text: [] };
+                                let baseEl = createLogElement(baseLog, log.isContinuation);
+                                measureContainer.appendChild(baseEl);
+                                
+                                let textBox = log.type === 'dialogue' ? baseEl.querySelector('.dialogue-text') : baseEl.querySelector('.narration-box');
+                                const baseStyle = window.getComputedStyle(baseEl);
+                                const baseMargin = parseFloat(baseStyle.marginTop) + parseFloat(baseStyle.marginBottom);
+
+                                // Try adding paragraphs one by one
+                                while(remainText.length > 0) {
+                                    let nextParaText = remainText[0];
+                                    let p = document.createElement('p');
+                                    p.textContent = nextParaText;
+                                    textBox.appendChild(p);
+                                    
+                                    // Check height with new paragraph
+                                    if (currentHeight + baseEl.offsetHeight + baseMargin <= MAX_CONTENT_HEIGHT_PX) {
+                                        fitText.push(remainText.shift());
+                                        canFitAny = true;
+                                    } else {
+                                        textBox.removeChild(p);
+                                        break;
+                                    }
+                                }
+                                measureContainer.removeChild(baseEl);
+
+                                if (canFitAny && fitText.length > 0) {
+                                    let fitLog = { ...log, text: fitText };
+                                    pageContent.appendChild(createLogElement(fitLog, log.isContinuation));
+                                    
+                                    bookContainer.appendChild(currentPageDiv);
+                                    totalPages++;
+                                    
+                                    currentPageDiv = createNewPage();
+                                    addPageNumber(currentPageDiv, totalPages + 1);
+                                    pageContent = currentPageDiv.querySelector('.page-content');
+                                    currentHeight = 0;
+                                    
+                                    if (remainText.length > 0) {
+                                        // Put remainder back to queue
+                                        queue.unshift({ ...log, text: remainText, isContinuation: true });
+                                        initialTotal++; 
+                                    }
+                                } else {
+                                    // Can't fit even one paragraph -> Next page
+                                    bookContainer.appendChild(currentPageDiv);
+                                    totalPages++;
+                                    currentPageDiv = createNewPage();
+                                    addPageNumber(currentPageDiv, totalPages + 1);
+                                    pageContent = currentPageDiv.querySelector('.page-content');
+                                    currentHeight = 0;
+                                    queue.unshift(log); 
+                                }
+                            } else {
+                                // Can't split (single block) -> Next page
+                                bookContainer.appendChild(currentPageDiv);
+                                totalPages++;
+                                currentPageDiv = createNewPage();
+                                addPageNumber(currentPageDiv, totalPages + 1);
+                                pageContent = currentPageDiv.querySelector('.page-content');
+                                currentHeight = 0;
+                                queue.unshift(log); 
+                            }
+                        }
+                    }
+                    resolve(queue.length > 0);
+                });
+            };
+
+            let hasMore = true;
+            while (hasMore) {
+                hasMore = await processChunk();
+                let progress = 0;
+                if(initialTotal > 0) progress = Math.min(99, Math.round(((completedCount) / (completedCount + queue.length)) * 100));
+                updateLoading(progress, totalPages);
+                await new Promise(r => setTimeout(r, 0));
+            }
+
+            if (pageContent.hasChildNodes()) {
+                bookContainer.appendChild(currentPageDiv);
+                totalPages++; 
+            }
+
+            totalPageLabel.innerText = `/ ${totalPages}`;
+            pageInput.max = totalPages;
+            currentPageIndex = 0;
+            updatePageDisplay();
+            setTimeout(() => showLoading(false), 300);
+        }
+
+        function createNewPage() {
+            const page = document.createElement('div');
+            page.className = 'book-page';
+            const content = document.createElement('div');
+            content.className = 'page-content';
+            page.appendChild(content);
+            return page;
+        }
+
+        function addPageNumber(pageDiv, pageNum) {
+            const numDiv = document.createElement('div');
+            numDiv.className = 'page-number';
+            numDiv.textContent = `- ${pageNum} -`;
+            pageDiv.appendChild(numDiv);
+        }
+
+        function updatePageDisplay() {
+            const pages = document.querySelectorAll('.book-page');
+            pages.forEach(p => p.classList.remove('active'));
+            if (pages[currentPageIndex]) pages[currentPageIndex].classList.add('active');
+            document.getElementById('btnPrev').disabled = currentPageIndex === 0;
+            document.getElementById('btnNext').disabled = currentPageIndex === pages.length - 1;
+            pageInput.value = currentPageIndex + 1;
+        }
+
+        function changePage(delta) {
+            const pages = document.querySelectorAll('.book-page');
+            const newIndex = currentPageIndex + delta;
+            if (newIndex >= 0 && newIndex < pages.length) {
+                currentPageIndex = newIndex;
+                updatePageDisplay();
+            }
+        }
+
+        function jumpToPage(val) {
+            const pageNum = parseInt(val);
+            const pages = document.querySelectorAll('.book-page');
+            if (pageNum >= 1 && pageNum <= pages.length) {
+                currentPageIndex = pageNum - 1;
+                updatePageDisplay();
+            } else { pageInput.value = currentPageIndex + 1; }
+        }
+        
+        // Init
+        setPageSize('A5');
+
+        // Fallback for saveAs if FileSaver fails to load
+        function saveFile(blob, fileName) {
+            if (window.saveAs) {
+                window.saveAs(blob, fileName);
+            } else {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            }
+        }
+
+        /* --- EPUB Export --- */
+        async function exportEPUB() {
+            const title = document.getElementById('modal-title').value.trim() || "TRPG Replay";
+            const author = document.getElementById('modal-author').value.trim() || "Unknown";
+            
+            showLoading(true, "EPUB 생성 중...");
+            const zip = new JSZip();
+            zip.file("mimetype", "application/epub+zip", { compression: "STORE" });
+            zip.file("META-INF/container.xml", `<?xml version="1.0"?><container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>`);
+
+            const oebps = zip.folder("OEBPS");
+            /* CSS for EPUB - Eco Friendly & P Tag */
+            const cssContent = `
+                body { font-family: sans-serif; line-height: 1.6; color: #111; }
+                .log-entry { margin-bottom: 1em; }
+                .char-name { font-weight: bold; display: block; margin-bottom: 0.2em; color: #111; }
+                .dialogue-text { text-align: justify; color: #222; }
+                .dialogue-text p { margin: 0; margin-bottom: 0.2em; }
+                .narration-box { font-style: italic; text-align: center; color: #333; margin: 1em 0; }
+                .narration-box p { margin: 0; margin-bottom: 0.2em; }
+                .dice-container { border: 1px solid #999; padding: 0.5em; background: #fff; font-family: monospace; border-radius: 4px; }
+                .dice-header { font-weight: bold; padding: 0.2em; border-bottom: 1px solid #ddd; text-align: center; color: #444; }
+                .dice-body { padding: 0.5em; line-height: 1.4; text-align: center; color: #111; }
+                .dice-body-line { display: block; } /* Ensure block display for dice lines */
+                .dice-result { font-weight: bold; text-align: center; background: #fff; color: #000; border: 1px solid #000; border-radius: 12px; padding: 0.2em 0.8em; margin: 0 auto; display: block; width: fit-content; }
+                .system-box { text-align: center; font-size: 0.9em; color: #555; border-top: 1px double #ccc; border-bottom: 1px double #ccc; padding: 0.5em 0; }
+            `;
+            oebps.file("style.css", cssContent);
+
+            let xhtmlContent = `<?xml version="1.0" encoding="utf-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><title>${title}</title><link rel="stylesheet" type="text/css" href="style.css" /></head><body>`;
+            
+            mergedLogs.forEach(log => {
+                let innerHTML = "";
+                // Use array to generate p tags for EPUB
+                const textArray = Array.isArray(log.text) ? log.text : [log.text];
+                // IMPORTANT FIX: Join with newline character to ensure source code separation
+                const textParagraphs = textArray.map(t => `<p>${t}</p>`).join('\n');
+
+                if (log.type === 'narration') {
+                    innerHTML = `<div class="narration-box">\n${textParagraphs}\n</div>`;
+                } else if (log.type === 'dice') {
+                    const rawText = Array.isArray(log.text) ? log.text.join(' ') : log.text;
+                    innerHTML = `<div class="dice-container">${formatDiceLog(log.name, rawText)}</div>`;
+                } else if (log.type === 'system') {
+                    const text = Array.isArray(log.text) ? log.text.join(' ') : log.text;
+                    innerHTML = `<div class="system-box">${text}</div>`;
+                } else {
+                    innerHTML = `<div class="log-entry">\n<span class="char-name">${log.name}</span>\n<div class="dialogue-text">\n${textParagraphs}\n</div>\n</div>`;
+                }
+                xhtmlContent += innerHTML + "\n";
+            });
+            xhtmlContent += `</body></html>`;
+            oebps.file("content.xhtml", xhtmlContent);
+
+            const opfContent = `<?xml version="1.0" encoding="UTF-8"?><package xmlns="http://www.idpf.org/2007/opf" unique-identifier="BookID" version="2.0"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf"><dc:title>${title}</dc:title><dc:creator opf:role="aut">${author}</dc:creator><dc:language>ko</dc:language><dc:identifier id="BookID" opf:scheme="UUID">urn:uuid:${crypto.randomUUID()}</dc:identifier></metadata><manifest><item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/><item id="style" href="style.css" media-type="text/css"/><item id="content" href="content.xhtml" media-type="application/xhtml+xml"/></manifest><spine toc="ncx"><itemref idref="content"/></spine></package>`;
+            oebps.file("content.opf", opfContent);
+
+            const ncxContent = `<?xml version="1.0" encoding="UTF-8"?><ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1"><head><meta name="dtb:uid" content="urn:uuid:12345"/><meta name="dtb:depth" content="1"/><meta name="dtb:totalPageCount" content="0"/><meta name="dtb:maxPageNumber" content="0"/></head><docTitle><text>${title}</text></docTitle><navMap><navPoint id="navPoint-1" playOrder="1"><navLabel><text>Start</text></navLabel><content src="content.xhtml"/></navPoint></navMap></ncx>`;
+            oebps.file("toc.ncx", ncxContent);
+
+            try {
+                const blob = await zip.generateAsync({ type: "blob" });
+                saveFile(blob, `${title}.epub`);
+            } catch (e) { alert("EPUB 실패: " + e.message); } 
+            finally { showLoading(false); }
+        }
+    </script>
+</body>
+</html>
