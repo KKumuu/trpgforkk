@@ -8,185 +8,698 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- 아이콘 (Lucide React) -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- 아이콘 (Material Icons) -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <!-- 폰트: 갈무리9 -->
     <style>
         @import url('https://cdn.jsdelivr.net/npm/galmuri@latest/dist/galmuri.css');
 
-        body {
-            background-color: #FFFFF0; /* 밝은 아이보리색 */
-            color: #333333;
-            font-family: 'Galmuri9', sans-serif;
+        :root {
+            --color-deep-pink: #F875AA;
+            --color-soft-pink: #FDEDED;
+            --color-mint: #EDFFF0;
+            --color-sky: #AEDEFC;
+            --color-ink: #333333;
+            --color-ivory: #FFFFF0;
         }
 
-        /* 폴더 탭 효과 */
+        body {
+            background-color: var(--color-ivory);
+            color: var(--color-ink);
+            font-family: 'Galmuri9', sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* 스크롤바 커스텀 */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #aaa; }
+
+        /* 폴더 탭 효과 (세로형) */
         .folder-container {
             position: relative;
             transition: all 0.2s ease-in-out;
-            margin-top: 1.5rem; /* 탭 공간 확보 (축소) */
+            margin-bottom: 1.5rem; /* 세로 간격 */
+            width: 100%;
         }
 
         .folder-container:hover {
-            transform: translateY(-5px);
+            transform: translateX(5px); /* 오른쪽으로 살짝 이동 */
         }
 
+        /* 왼쪽 탭 */
         .folder-tab {
             position: absolute;
-            top: -24px; /* 탭 위치 조정 */
-            left: 0;
-            width: 70px; /* 탭 너비 축소 */
-            height: 28px; /* 탭 높이 축소 */
-            border-radius: 8px 8px 0 0;
+            top: 0;
+            left: -12px;
+            width: 20px;
+            height: 100%;
+            border-radius: 4px 0 0 4px;
             z-index: 0;
-            border: 2px solid rgba(0,0,0,0.1); /* 테두리 연하게 */
-            border-bottom: none;
+            border: 2px solid rgba(0,0,0,0.1);
+            border-right: none;
         }
 
         .folder-body {
             position: relative;
             z-index: 10;
-            border: 1px solid rgba(0,0,0,0.1); /* 테두리 두께 축소 */
-            border-radius: 0 8px 8px 8px;
-            height: 100%;
+            border: 1px solid rgba(0,0,0,0.1);
+            border-radius: 4px;
+            padding: 1rem;
             display: flex;
-            flex-direction: column;
+            align-items: center;
             justify-content: space-between;
-            box-shadow: 3px 3px 0px rgba(0,0,0,0.1); /* 그림자 축소 */
+            box-shadow: 2px 2px 0px rgba(0,0,0,0.1);
+        }
+
+        /* 모니터 스타일 */
+        .monitor-frame {
+            background-color: #f0f0f0;
+            border-radius: 16px;
+            padding: 16px;
+            box-shadow: 
+                inset 2px 2px 5px rgba(255,255,255,0.8),
+                inset -2px -2px 5px rgba(0,0,0,0.1),
+                10px 10px 20px rgba(0,0,0,0.1);
+            border: 4px solid #fff;
+            position: relative;
+        }
+
+        .monitor-screen {
+            background-color: #333; 
+            background-image: url('https://images.unsplash.com/photo-1642861001064-e7f0c4371718?q=80&w=735&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D');
+            background-size: cover;
+            background-position: center;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            box-shadow: inset 2px 2px 5px rgba(0,0,0,0.2);
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+            aspect-ratio: 4/3;
+        }
+
+        /* 반짝이 효과 */
+        .sparkle {
+            position: absolute;
+            top: -10px;
+            color: #fff;
+            font-size: 1em;
+            font-family: Arial, sans-serif;
+            text-shadow: 0 0 5px #fff, 0 0 10px #FFD700;
+            animation-name: fall, twinkle;
+            animation-timing-function: linear, ease-in-out;
+            animation-iteration-count: infinite, infinite;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        @keyframes fall {
+            0% { top: -10px; }
+            100% { top: 100%; }
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 1; transform: scale(1) rotate(0deg); }
+            50% { opacity: 0.5; transform: scale(0.8) rotate(180deg); }
+        }
+
+        /* 윈도우 창 스타일 */
+        .window-popup {
+            position: absolute;
+            top: 15%;
+            left: 15%;
+            width: 320px;
+            background: var(--color-soft-pink);
+            border: 2px solid #fff;
+            border-right-color: var(--color-deep-pink);
+            border-bottom-color: var(--color-deep-pink);
+            box-shadow: 4px 4px 0px rgba(0,0,0,0.1);
+            display: none;
+            flex-direction: column;
+            z-index: 100;
         }
         
-        .folder-body::before {
-            content: '';
-            position: absolute;
-            top: -1px;
-            left: 0;
-            width: 68px;
-            height: 2px;
-            background-color: inherit;
-            z-index: 20;
+        .window-popup.open {
+            display: flex;
+            animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
-        /* 배경색 유틸리티 */
-        .bg-color-1 { background-color: #F875AA; }
-        .bg-color-2 { background-color: #AEDEFC; }
-        .bg-color-3 { background-color: #EDFFF0; }
-        .bg-color-4 { background-color: #FDEDED; }
+        /* 중앙 팝업용 */
+        .window-popup.center-popup {
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            width: 250px;
+            opacity: 0;
+        }
+        .window-popup.center-popup.open {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+        }
 
-        /* 글씨 색 유틸리티 (각 폴더에 어울리는 색 지정) */
-        .text-color-1 { color: #FFFFFF; } /* 흰색 */
-        .text-color-2 { color: #0C4A6E; } /* 진한 파랑 */
-        .text-color-3 { color: #064E3B; } /* 진한 초록 */
-        .text-color-4 { color: #7F1D1D; } /* 진한 빨강 */
+        .window-header {
+            background: linear-gradient(90deg, var(--color-deep-pink), #ff9eb5);
+            color: white;
+            padding: 4px 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            font-weight: bold;
+            text-shadow: 1px 1px 0 rgba(0,0,0,0.2);
+            cursor: grab;
+        }
+
+        .close-btn {
+            width: 16px;
+            height: 16px;
+            background: var(--color-soft-pink);
+            border: 1px solid white;
+            color: var(--color-deep-pink);
+            font-size: 12px;
+            line-height: 12px;
+            text-align: center;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 2px;
+        }
+        .close-btn:hover {
+            background: white;
+        }
+
+        /* 태스크바 */
+        .taskbar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 32px;
+            background: var(--color-sky);
+            border-top: 2px solid white;
+            display: flex;
+            align-items: center;
+            padding: 3px;
+            box-shadow: 0 -2px 2px rgba(0,0,0,0.05);
+            z-index: 50;
+        }
+
+        .start-btn {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            border: 2px solid white;
+            border-right-color: #8bbce6;
+            border-bottom-color: #8bbce6;
+            background: var(--color-mint);
+            color: var(--color-ink);
+            font-weight: bold;
+            font-size: 11px;
+            margin-right: 8px;
+            cursor: pointer;
+            box-shadow: 1px 1px 0 rgba(0,0,0,0.1);
+        }
+        .start-btn:active {
+            border: 2px solid #8bbce6;
+            border-right-color: white;
+            border-bottom-color: white;
+            transform: translate(1px, 1px);
+        }
+
+        /* 바탕화면 아이콘 그리드 */
+        .desktop-grid {
+            display: flex;
+            flex-direction: column;
+            flex-wrap: wrap;
+            height: calc(100% - 32px);
+            align-content: flex-start;
+            padding: 10px;
+            gap: 10px;
+            z-index: 10;
+            position: relative;
+        }
+
+        .desktop-icon {
+            width: 70px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            padding: 5px;
+            border: 1px solid transparent;
+            border-radius: 4px;
+            margin-bottom: 4px;
+        }
+        .desktop-icon:hover {
+            background-color: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.4);
+        }
+        .icon-img-box {
+            width: 36px;
+            height: 36px;
+            /* 기본 배경색은 HTML 인라인 클래스로 제어 */
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 4px;
+            box-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        .icon-text {
+            color: white;
+            font-size: 11px;
+            text-align: center;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            background-color: rgba(0,0,0,0.3);
+            border-radius: 4px;
+            padding: 2px 4px;
+            line-height: 1.2;
+        }
+
+        /* 색상 유틸리티 */
+        .bg-deep-pink { background-color: var(--color-deep-pink); }
+        .bg-soft-pink { background-color: var(--color-soft-pink); }
+        .bg-mint { background-color: var(--color-mint); }
+        .bg-sky { background-color: var(--color-sky); }
+        
+        .text-deep-pink { color: var(--color-deep-pink); }
+        .text-soft-pink { color: var(--color-soft-pink); }
+        .text-mint { color: var(--color-mint); }
+        .text-sky { color: var(--color-sky); }
+        .text-ink { color: var(--color-ink); }
+        
+        /* 주사위 결과 색상 (Sky) */
+        .text-result-sky { color: var(--color-sky); }
+
+        @keyframes popIn {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        
+        @keyframes popInCenter {
+            from { transform: translate(-50%, -50%) scale(0.9); opacity: 0; }
+            to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+        .window-popup.center-popup.open {
+            animation: popInCenter 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
 
     </style>
 </head>
-<body class="min-h-screen flex flex-col items-center justify-center p-4">
+<body class="min-h-screen flex items-center justify-center p-4 lg:p-10">
 
-    <!-- 메인 컨테이너 (폭 축소) -->
-    <div class="max-w-5xl w-full">
+    <div class="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-12 gap-8 h-full">
         
-        <!-- 헤더 -->
-        <header class="text-center mb-10">
-            <h1 class="text-2xl md:text-4xl font-bold mb-2 text-gray-800 tracking-wide">CCFolia 도구</h1>
-            <p class="text-gray-500 text-sm">세션을 좀 더 편하게 하자</p>
-        </header>
+        <!-- 왼쪽: 사이드바 (폴더 메뉴) -->
+        <aside class="lg:col-span-3 flex flex-col justify-center gap-2">
+            
+            <!-- 타이틀 -->
+            <div class="mb-6 pl-2">
+                <h1 class="text-2xl font-bold text-gray-800 leading-tight">KKfolia<br>바구니</h1>
+                <p class="text-xs text-gray-500 mt-1">CCFolia를 좀 더 편하게 하자</p>
+            </div>
 
-        <!-- 도구 선택 그리드 (간격 축소) -->
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+            <!-- 바로가기: 누덕누덕 설정틀 -->
+            <a href="https://kkumuu.github.io/character-sheet/" target="_blank" 
+               class="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all mb-4 group">
+                <div class="bg-deep-pink p-1.5 rounded text-white group-hover:scale-110 transition-transform">
+                    <i data-lucide="link" class="w-4 h-4"></i>
+                </div>
+                <span class="text-xs font-bold text-gray-600 group-hover:text-deep-pink">누덕누덕 설정틀</span>
+            </a>
 
-            <!-- 1. 로그 변환기 (#F875AA) -->
+            <!-- 구분선 -->
+            <div class="h-px bg-gray-200 my-2 mx-2"></div>
+
+            <!-- 폴더 1: 로그 변환 (글씨색 text-ink로 변경) -->
             <a href="./A.html" class="folder-container block group">
-                <div class="folder-tab bg-color-1 border-pink-700/20"></div>
-                <div class="folder-body bg-color-1 p-4 border-pink-700/20">
-                    <div>
-                        <div class="flex items-center justify-between mb-2">
-                            <h2 class="text-lg font-bold text-color-1 group-hover:underline">로그 변환</h2>
-                            <div class="p-1.5 bg-white/20 rounded text-color-1">
-                                <i data-lucide="file-text" class="w-4 h-4"></i>
-                            </div>
-                        </div>
-                        <p class="text-color-1 opacity-90 text-xs leading-relaxed">
-                            텍스트 로그를<br>PDF로 변환
-                        </p>
+                <div class="folder-tab bg-deep-pink"></div>
+                <div class="folder-body bg-deep-pink">
+                    <div class="text-ink"> <!-- text-white -> text-ink 변경 -->
+                        <div class="text-sm font-bold group-hover:underline">로그 변환</div>
+                        <div class="text-[10px] opacity-90">Log to PDF</div>
                     </div>
-                    <div class="mt-3 text-right">
-                        <span class="text-[10px] text-color-1 bg-black/10 px-1.5 py-0.5 rounded">Open</span>
+                    <div class="bg-white p-1.5 rounded text-deep-pink shadow-sm">
+                        <span class="material-icons md-18" style="font-size: 18px;">description</span>
                     </div>
                 </div>
             </a>
 
-            <!-- 2. 줄바꿈 교정기 (#AEDEFC) -->
+            <!-- 폴더 2: 줄바꿈 교정 -->
             <a href="./B.html" class="folder-container block group">
-                <div class="folder-tab bg-color-2 border-blue-800/20"></div>
-                <div class="folder-body bg-color-2 p-4 border-blue-800/20">
-                    <div>
-                        <div class="flex items-center justify-between mb-2">
-                            <h2 class="text-lg font-bold text-color-2 group-hover:underline">줄바꿈 교정</h2>
-                            <div class="p-1.5 bg-white/40 rounded text-color-2">
-                                <i data-lucide="align-left" class="w-4 h-4"></i>
-                            </div>
-                        </div>
-                        <p class="text-color-2 opacity-80 text-xs leading-relaxed">
-                            깨진 줄바꿈과<br>공백 자동 수정
-                        </p>
+                <div class="folder-tab bg-sky"></div>
+                <div class="folder-body bg-sky">
+                    <div class="text-ink">
+                        <div class="text-sm font-bold group-hover:underline">줄바꿈 교정</div>
+                        <div class="text-[10px] opacity-80">Line Fixer</div>
                     </div>
-                    <div class="mt-3 text-right">
-                        <span class="text-[10px] text-color-2 bg-white/40 px-1.5 py-0.5 rounded">Open</span>
+                    <div class="bg-white p-1.5 rounded text-sky-600 shadow-sm">
+                        <span class="material-icons md-18" style="font-size: 18px;">wrap_text</span>
                     </div>
                 </div>
             </a>
 
-            <!-- 3. 코코포리아 팔레트 (#EDFFF0) -->
+            <!-- 폴더 3: BGM 영수증 -->
             <a href="./C.html" class="folder-container block group">
-                <div class="folder-tab bg-color-3 border-green-800/20"></div>
-                <div class="folder-body bg-color-3 p-4 border-green-800/20">
-                    <div>
-                        <div class="flex items-center justify-between mb-2">
-                            <h2 class="text-lg font-bold text-color-3 group-hover:underline">챗 팔레트</h2>
-                            <div class="p-1.5 bg-emerald-600/10 rounded text-color-3">
-                                <i data-lucide="dices" class="w-4 h-4"></i>
-                            </div>
-                        </div>
-                        <p class="text-color-3 opacity-80 text-xs leading-relaxed">
-                            NPC 대사를<br>매크로 형식으로
-                        </p>
+                <div class="folder-tab bg-mint"></div>
+                <div class="folder-body bg-mint">
+                    <div class="text-ink">
+                        <div class="text-sm font-bold group-hover:underline">BGM 영수증</div>
+                        <div class="text-[10px] opacity-80">Playlist Log</div>
                     </div>
-                    <div class="mt-3 text-right">
-                        <span class="text-[10px] text-color-3 bg-emerald-600/10 px-1.5 py-0.5 rounded">Open</span>
+                    <div class="bg-white p-1.5 rounded text-green-600 shadow-sm">
+                        <span class="material-icons md-18" style="font-size: 18px;">receipt_long</span>
                     </div>
                 </div>
             </a>
 
-            <!-- 4. 핸드아웃 메이커 (#FDEDED) -->
+            <!-- 폴더 4: 핸드아웃 -->
             <a href="./D.html" class="folder-container block group">
-                <div class="folder-tab bg-color-4 border-red-800/20"></div>
-                <div class="folder-body bg-color-4 p-4 border-red-800/20">
-                    <div>
-                        <div class="flex items-center justify-between mb-2">
-                            <h2 class="text-lg font-bold text-color-4 group-hover:underline">핸드아웃</h2>
-                            <div class="p-1.5 bg-rose-600/10 rounded text-color-4">
-                                <i data-lucide="image" class="w-4 h-4"></i>
-                            </div>
-                        </div>
-                        <p class="text-color-4 opacity-80 text-xs leading-relaxed">
-                            간단한 텍스트<br>이미지 생성
-                        </p>
+                <div class="folder-tab bg-soft-pink"></div>
+                <div class="folder-body bg-soft-pink">
+                    <div class="text-ink">
+                        <div class="text-sm font-bold group-hover:underline">핸드아웃</div>
+                        <div class="text-[10px] opacity-80">Handout Maker</div>
                     </div>
-                    <div class="mt-3 text-right">
-                        <span class="text-[10px] text-color-4 bg-rose-600/10 px-1.5 py-0.5 rounded">Open</span>
+                    <div class="bg-white p-1.5 rounded text-rose-500 shadow-sm">
+                        <span class="material-icons md-18" style="font-size: 18px;">image</span>
                     </div>
                 </div>
             </a>
 
-        </div>
+            <p class="text-[10px] text-gray-400 mt-4 pl-2">&copy; 2025 kkumuu</p>
+        </aside>
 
-        <!-- 푸터 -->
-        <footer class="mt-12 text-center text-gray-400 text-[10px]">
-            <p>&copy; 2024 kkumuu TRPG Tools.</p>
-        </footer>
+        <!-- 중앙: 모니터 영역 -->
+        <main class="lg:col-span-9 flex flex-col items-center justify-center">
+            
+            <div class="monitor-frame w-full max-w-3xl bg-white">
+                <!-- 화면 (윈도우 스타일 내부) -->
+                <div class="monitor-screen" id="desktop-screen">
+                    
+                    <!-- 반짝이 컨테이너 -->
+                    <div id="sparkle-container" class="absolute inset-0 pointer-events-none z-0"></div>
+
+                    <!-- 바탕화면 아이콘 그리드 -->
+                    <div class="desktop-grid">
+                        
+                        <!-- 1. 인터넷 (CCFolia) - 배경: Sky -->
+                        <a href="https://ccfolia.com/" target="_blank" class="desktop-icon">
+                            <div class="icon-img-box group bg-sky border border-white/50">
+                                <i data-lucide="globe" class="text-ink w-5 h-5 group-hover:scale-110 transition-transform"></i>
+                            </div>
+                            <span class="icon-text">인터넷</span>
+                        </a>
+
+                        <!-- 2. 휴지통 - 배경: Soft Pink -->
+                        <div class="desktop-icon" onclick="toggleWindow('trash-popup-window')">
+                            <div class="icon-img-box group bg-soft-pink border border-white/50">
+                                <i data-lucide="trash-2" class="text-ink w-5 h-5 group-hover:scale-110 transition-transform"></i>
+                            </div>
+                            <span class="icon-text">휴지통</span>
+                        </div>
+
+                        <!-- 3. 노동요 플레이어 - 배경: Deep Pink -->
+                        <div class="desktop-icon" onclick="toggleWindow('music-player-window')">
+                            <div class="icon-img-box group bg-deep-pink border border-white/50">
+                                <i data-lucide="music" class="text-white w-5 h-5 group-hover:scale-110 transition-transform"></i>
+                            </div>
+                            <span class="icon-text">노동요.exe</span>
+                        </div>
+
+                        <!-- 4. 자기소개 바로가기 - 배경: Mint -->
+                        <a href="https://unicornsand.carrd.co/" target="_blank" class="desktop-icon">
+                            <div class="icon-img-box group bg-mint border border-white/50">
+                                <i data-lucide="user-circle" class="text-ink w-5 h-5 group-hover:scale-110 transition-transform"></i>
+                            </div>
+                            <span class="icon-text">자기소개.txt</span>
+                        </a>
+
+                        <!-- 5. 메모장 - 배경: Soft Pink -->
+                        <div class="desktop-icon" onclick="toggleWindow('notepad-window')">
+                            <div class="icon-img-box group bg-soft-pink border border-white/50">
+                                <i data-lucide="sticky-note" class="text-ink w-5 h-5 group-hover:scale-110 transition-transform"></i>
+                            </div>
+                            <span class="icon-text">메모장</span>
+                        </div>
+
+                        <!-- 6. 주사위 - 배경: Mint -->
+                        <div class="desktop-icon" onclick="toggleWindow('dice-window')">
+                            <div class="icon-img-box group bg-mint border border-white/50">
+                                <i data-lucide="dices" class="text-ink w-5 h-5 group-hover:scale-110 transition-transform"></i>
+                            </div>
+                            <span class="icon-text">주사위</span>
+                        </div>
+
+                    </div>
+
+                    <!-- 팝업 1: 뮤직 플레이어 -->
+                    <div id="music-player-window" class="window-popup">
+                        <div class="window-header">
+                            <div class="flex items-center gap-1">
+                                <span class="material-icons" style="font-size: 12px;">music_note</span>
+                                <span>Essential_BGM.mp3</span>
+                            </div>
+                            <div class="close-btn" onclick="toggleWindow('music-player-window')">✕</div>
+                        </div>
+                        <div class="p-1 flex-grow flex flex-col">
+                            <div class="bg-black border border-white/50 relative aspect-video w-full shadow-inner">
+                                <iframe 
+                                    class="absolute top-0 left-0 w-full h-full"
+                                    src="https://www.youtube.com/embed/videoseries?list=PLfm7PFk5pndIlSqgsgXdI1hyxTMRtqujO&autoplay=0&mute=0" 
+                                    title="YouTube video player" 
+                                    frameborder="0" 
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                                    allowfullscreen>
+                                </iframe>
+                            </div>
+                            <div class="mt-2 bg-white/50 p-2 rounded border border-white/60 flex items-center gap-2">
+                                <div class="w-2 h-2 rounded-full bg-deep-pink animate-pulse"></div>
+                                <span class="text-[10px] text-gray-600 font-bold">Now Playing...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 팝업 2: Start 버튼 메시지 -->
+                    <div id="start-popup-window" class="window-popup center-popup">
+                        <div class="window-header">
+                            <div class="flex items-center gap-1">
+                                <span class="material-icons" style="font-size: 12px;">campaign</span>
+                                <span>Message</span>
+                            </div>
+                            <div class="close-btn" onclick="toggleWindow('start-popup-window')">✕</div>
+                        </div>
+                        <div class="p-4 flex-grow flex flex-col items-center justify-center text-center bg-[#FFFFF0]">
+                            <div class="mb-2 p-2 bg-pink-100 rounded-full">
+                                <span class="material-icons text-deep-pink md-36">sentiment_very_satisfied</span>
+                            </div>
+                            <p class="text-sm font-bold text-gray-700 leading-relaxed">
+                                오늘도 행복한<br>하루 보내세요!
+                            </p>
+                            <button onclick="toggleWindow('start-popup-window')" class="mt-4 px-3 py-1 bg-white border border-gray-300 rounded text-xs hover:bg-gray-50 shadow-sm">
+                                확인
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 팝업 3: 휴지통 -->
+                    <div id="trash-popup-window" class="window-popup center-popup">
+                        <div class="window-header">
+                            <div class="flex items-center gap-1">
+                                <span class="material-icons" style="font-size: 12px;">delete</span>
+                                <span>Recycle Bin</span>
+                            </div>
+                            <div class="close-btn" onclick="toggleWindow('trash-popup-window')">✕</div>
+                        </div>
+                        <div class="p-4 flex-grow flex flex-col items-center justify-center text-center bg-[#FFFFF0]">
+                            <div class="mb-2 p-2 bg-gray-200 rounded-full">
+                                <span class="material-icons text-gray-500 md-36">delete_outline</span>
+                            </div>
+                            <p class="text-sm font-bold text-gray-700 leading-relaxed">
+                                휴지통이<br>비어있습니다.
+                            </p>
+                            <button onclick="toggleWindow('trash-popup-window')" class="mt-4 px-3 py-1 bg-white border border-gray-300 rounded text-xs hover:bg-gray-50 shadow-sm">
+                                확인
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 팝업 4: 메모장 -->
+                    <div id="notepad-window" class="window-popup" style="top: 20%; left: 40%; height: 300px;">
+                        <div class="window-header">
+                            <div class="flex items-center gap-1">
+                                <span class="material-icons" style="font-size: 12px;">edit_note</span>
+                                <span>Notepad.txt</span>
+                            </div>
+                            <div class="close-btn" onclick="toggleWindow('notepad-window')">✕</div>
+                        </div>
+                        <div class="flex-grow flex flex-col bg-white">
+                            <!-- 메뉴바 흉내 -->
+                            <div class="flex gap-2 px-2 py-1 text-[10px] bg-gray-100 border-b border-gray-300 text-gray-600">
+                                <span>파일(F)</span> <span>편집(E)</span> <span>서식(O)</span>
+                            </div>
+                            <textarea id="my-memo" class="flex-grow p-2 text-xs resize-none focus:outline-none font-mono" placeholder="여기에 내용을 입력하세요. (자동저장됨)"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- 팝업 5: 주사위 -->
+                    <div id="dice-window" class="window-popup center-popup">
+                        <div class="window-header">
+                            <div class="flex items-center gap-1">
+                                <span class="material-icons" style="font-size: 12px;">casino</span>
+                                <span>Dice Roller</span>
+                            </div>
+                            <div class="close-btn" onclick="toggleWindow('dice-window')">✕</div>
+                        </div>
+                        <div class="p-4 bg-[#FFFFF0]">
+                            <div class="grid grid-cols-3 gap-2 mb-4">
+                                <button onclick="rollDice(4)" class="bg-white border border-gray-300 p-2 rounded hover:bg-gray-50 text-xs font-bold">d4</button>
+                                <button onclick="rollDice(6)" class="bg-white border border-gray-300 p-2 rounded hover:bg-gray-50 text-xs font-bold">d6</button>
+                                <button onclick="rollDice(10)" class="bg-white border border-gray-300 p-2 rounded hover:bg-gray-50 text-xs font-bold">d10</button>
+                                <button onclick="rollDice(20)" class="bg-white border border-gray-300 p-2 rounded hover:bg-gray-50 text-xs font-bold">d20</button>
+                                <button onclick="rollDice(100)" class="bg-white border border-gray-300 p-2 rounded hover:bg-gray-50 text-xs font-bold col-span-2">d100</button>
+                            </div>
+                            <div class="bg-black p-3 rounded font-mono text-center">
+                                <div class="text-[10px] text-gray-500 mb-1">RESULT</div>
+                                <!-- 결과 색상: Sky (#AEDEFC) -->
+                                <div id="dice-result" class="text-2xl text-result-sky animate-pulse">0</div>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <!-- 태스크바 -->
+                    <div class="taskbar">
+                        <div class="start-btn" onclick="toggleWindow('start-popup-window')">
+                            <span class="material-icons" style="font-size: 14px; color: #F875AA;">grid_view</span>
+                            Start
+                        </div>
+                        <div class="h-4 w-px bg-white/50 mx-1"></div>
+                        
+                        <div class="px-2 py-0.5 bg-white/40 rounded border border-white/60 text-xs font-bold text-ink flex items-center gap-1 shadow-sm">
+                            <span class="material-icons text-deep-pink" style="font-size: 12px;">favorite</span>
+                            kkumuu's Desktop
+                        </div>
+
+                        <div class="flex-grow"></div>
+                        
+                        <div class="px-2 py-0.5 bg-white/40 rounded border border-white/60 text-xs text-ink flex items-center gap-1 shadow-inner">
+                            <span class="material-icons text-gray-500" style="font-size: 12px;">schedule</span>
+                            <span id="clock" class="font-mono">PM 12:00</span>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- 모니터 하단 -->
+                <div class="mt-3 flex justify-between items-center px-4">
+                    <div class="flex gap-2">
+                        <div class="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
+                        <div class="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
+                    </div>
+                    <div class="text-gray-400 font-bold text-[10px] tracking-[0.2em]">KKUMUU SYS</div>
+                    <div class="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_5px_rgba(74,222,128,0.8)] animate-pulse"></div>
+                </div>
+            </div>
+            
+            <div class="w-32 h-6 bg-gray-200 mx-auto border-x border-gray-300 shadow-sm mt-[-2px] z-[-1]"></div>
+            <div class="w-48 h-3 bg-gray-200 mx-auto rounded-t-lg border-t border-gray-300 shadow-md"></div>
+
+        </main>
     </div>
 
     <script>
-        // 아이콘 렌더링
         lucide.createIcons();
+
+        // 시계
+        function updateClock() {
+            const now = new Date();
+            let hours = now.getHours();
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12;
+            hours = hours ? hours : 12; 
+            document.getElementById('clock').innerText = `${ampm} ${hours}:${minutes}`;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // 윈도우 토글 함수
+        function toggleWindow(windowId) {
+            const win = document.getElementById(windowId);
+            if (!win) return;
+            
+            if (win.style.display === 'flex') {
+                win.style.display = 'none';
+                win.classList.remove('open');
+            } else {
+                win.style.display = 'flex';
+                setTimeout(() => win.classList.add('open'), 10);
+                
+                // 메모장 열 때 저장된 내용 불러오기
+                if(windowId === 'notepad-window') loadMemo();
+            }
+        }
+
+        // 반짝이 효과
+        function createSparkles() {
+            const container = document.getElementById('sparkle-container');
+            const count = 30;
+            const shapes = ['✨', '✦', '⋆', '｡'];
+
+            for (let i = 0; i < count; i++) {
+                const sparkle = document.createElement('div');
+                sparkle.classList.add('sparkle');
+                sparkle.textContent = shapes[Math.floor(Math.random() * shapes.length)];
+                
+                const startLeft = Math.random() * 100;
+                const duration = Math.random() * 5 + 5;
+                const delay = Math.random() * 5;
+                const size = Math.random() * 0.8 + 0.5;
+
+                sparkle.style.left = `${startLeft}%`;
+                sparkle.style.animationDuration = `${duration}s, 3s`;
+                sparkle.style.animationDelay = `${delay}s, ${delay}s`;
+                sparkle.style.fontSize = `${size}em`;
+                sparkle.style.opacity = Math.random() * 0.7 + 0.3;
+
+                container.appendChild(sparkle);
+            }
+        }
+
+        window.addEventListener('load', createSparkles);
+
+        // --- 기능 로직 ---
+
+        // 1. 메모장 기능
+        const memoArea = document.getElementById('my-memo');
+        memoArea.addEventListener('input', function() {
+            localStorage.setItem('kkumuu_memo', this.value);
+        });
+
+        function loadMemo() {
+            const savedMemo = localStorage.getItem('kkumuu_memo');
+            if (savedMemo) {
+                memoArea.value = savedMemo;
+            }
+        }
+
+        // 2. 주사위 기능
+        function rollDice(sides) {
+            const resultDisplay = document.getElementById('dice-result');
+            // 애니메이션 효과
+            resultDisplay.style.opacity = 0;
+            setTimeout(() => {
+                const result = Math.floor(Math.random() * sides) + 1;
+                resultDisplay.innerText = result;
+                resultDisplay.style.opacity = 1;
+            }, 100);
+        }
+
     </script>
 </body>
 </html>
