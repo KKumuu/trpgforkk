@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TRPG Handout Studio v9</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;700&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+    <!-- Galmuri9 (Dot Font) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@latest/dist/galmuri.css">
+    <!-- Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <style>
+        /* Custom Fonts for Handouts */
+        @font-face {
+            font-family: 'MissedSimsim';
+            src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2511-1@1.0/Griun_Simsimche-Rg.woff2') format('woff2');
+            font-weight: normal; font-display: swap;
+        }
+        @font-face {
+            font-family: 'YoonChoWooSan';
+            src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408@1.0/YoonChildfundkoreaManSeh.woff2') format('woff2');
+            font-weight: normal; font-display: swap;
+        }
+        @font-face {
+            font-family: 'KyoboHandwriting2020ParkDoYeon';
+            src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2112@1.0/KyoboHandwriting2020A.woff') format('woff');
+            font-weight: normal; font-display: swap;
+        }
+
+        :root {
+            --bg-main: #AEDEFC;
+            --bg-input: #FDEDED;
+            --point: #F875AA;
+        }
+
+        /* UI Base Font (Galmuri9) - Applied only to UI elements */
+        body {
+            background-color: var(--bg-main);
+            font-family: 'Galmuri9', sans-serif;
+            color: #333;
+            overflow-x: hidden;
+        }
+
+        /* Material Symbols Styling */
+        .material-symbols-outlined {
+            font-family: 'Material Symbols Outlined' !important;
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+
+        /* UI Elements Font Reset */
+        button, input, textarea, select, label, h1, h2, h3, p, span:not(.material-symbols-outlined) {
+            font-family: 'Galmuri9', sans-serif;
+        }
+
+        .ui-text { font-size: 0.75rem; }
+        input, textarea, select {
+            background-color: var(--bg-input) !important;
+            border: 1px solid #E5E7EB;
+            font-size: 0.85rem;
+        }
+        input:focus, textarea:focus {
+            border-color: var(--point);
+            outline: none;
+            background-color: #FFFFFF !important;
+        }
+
+        /* Handout Container - Pure theme fonts inside */
+        .handout-container {
+            background: #FFF;
+            position: relative;
+            box-shadow: none;
+            margin: 0 auto;
+            border: 1px solid #ddd;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Handout Specific Overrides - Ensuring UI fonts don't bleed in */
+        .handout-container * {
+            font-family: inherit !important;
+        }
+        .handout-container .material-symbols-outlined {
+            font-family: 'Material Symbols Outlined' !important;
+        }
+
+        /* Paper Textures */
+        .texture-parchment { background-image: url('https://www.transparenttextures.com/patterns/handmade-paper.png'); background-color: #fcfaf2; }
+        .texture-grid { background-image: url('https://www.transparenttextures.com/patterns/graphy.png'); }
+        .texture-ruled { background-image: linear-gradient(transparent, transparent 1.95em, #e5e5e5 1.95em, #e5e5e5 2em); background-size: 100% 2em; }
+        .texture-fiber { background-image: url('https://www.transparenttextures.com/patterns/white-diamond.png'); opacity: 0.9; }
+
+        /* --- THEMES --- */
+        .theme-modern { border: 1px solid #333; font-family: 'Noto Sans KR', sans-serif !important; }
+        .theme-memo { border: 2px solid #333; background-color: #fff; }
+        .theme-memo .tape { width: 50px; height: 16px; background: #333; margin: -8px auto 12px auto; transform: rotate(-1deg); z-index: 10; }
+
+        /* Win 11 Style */
+        .theme-system { 
+            border-radius: 12px; 
+            border: 1px solid #e0e0e0; 
+            background: #ffffff; 
+            font-family: 'Segoe UI', 'Noto Sans KR', sans-serif !important;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
+        }
+        .system-win-header { 
+            padding: 12px 16px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            background: #f9f9f9;
+            border-bottom: 1px solid #eee;
+        }
+
+        .theme-message { border: 12px solid #1a1a1a; border-radius: 40px; padding: 0; font-family: 'Noto Sans KR', sans-serif !important; position: relative; background: #fff; }
+        .phone-status-bar { padding: 14px 24px 4px 24px; display: flex; justify-content: flex-end; align-items: center; }
+        .bubble-group { display: flex; flex-direction: column; gap: 8px; width: 100%; padding: 10px 20px; }
+        .bubble { padding: 10px 14px; border-radius: 18px; max-width: 85%; word-break: break-all; font-size: 0.85rem; line-height: 1.4; }
+        .bubble-left { border-bottom-left-radius: 2px; align-self: flex-start; background: #f1f1f1; color: #000; }
+        .bubble-right { border-bottom-right-radius: 2px; align-self: flex-end; color: #FFF; }
+
+        .theme-email { border: 1px solid #CCC; font-family: 'Noto Sans KR', sans-serif !important; background: #fff; }
+        .email-top { border-bottom: 1px solid #EEE; padding: 20px; font-size: 13px; line-height: 1.8; background: #fafafa; }
+        .email-body { padding: 30px; }
+
+        .handout-image-container { margin: 15px 0; max-width: 100%; display: flex; justify-content: center; }
+        .handout-image-container img { max-width: 90%; border-radius: 6px; object-fit: contain; border: 1px solid #eee; }
+
+        /* Tooltip */
+        .hover-preview {
+            position: fixed; z-index: 100; background: white; border: 1px solid var(--point);
+            padding: 10px; width: 250px; pointer-events: none; display: none; font-size: 0.7rem; color: #333; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+
+    <!-- Top Header -->
+    <header class="bg-white px-6 py-3 border-b border-gray-200 flex justify-between items-center shadow-sm z-10">
+        <h1 class="text-xl font-bold flex items-center gap-2">
+            <span class="material-symbols-outlined text-pink-500 text-3xl">brush</span>
+            <span>Handout Studio v9</span>
+        </h1>
+        <div class="flex gap-2">
+            <button onclick="copyToClipboard()" class="text-xs bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 flex items-center gap-1 transition-all">
+                <span class="material-symbols-outlined text-sm">content_copy</span> 복사
+            </button>
+            <button onclick="saveAsImage()" class="text-xs bg-pink-500 text-white px-4 py-2 rounded-lg hover:bg-pink-600 flex items-center gap-1 transition-all">
+                <span class="material-symbols-outlined text-sm">download</span> 이미지 저장
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 flex overflow-hidden">
+        
+        <!-- Left: Editor -->
+        <aside class="w-80 bg-white border-r border-gray-200 overflow-y-auto p-5 space-y-6">
+            
+            <!-- 1. Theme -->
+            <div class="space-y-2">
+                <h2 class="ui-text font-bold text-gray-400 uppercase border-b pb-1 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-sm">palette</span> 1. 테마 및 폰트
+                </h2>
+                <select id="themeSelect" onchange="handleThemeChange()" class="w-full p-2.5 rounded-lg font-bold border-2 border-pink-50 transition-colors focus:border-pink-300">
+                    <option value="theme-modern">기본 모던 (Simple)</option>
+                    <option value="theme-memo">메모지 (Memo)</option>
+                    <option value="theme-system">시스템창 (Win 11)</option>
+                    <option value="theme-message">문자 메세지 (SMS)</option>
+                    <option value="theme-email">전자우편 (Mail)</option>
+                </select>
+                <div id="memoFontGroup" class="hidden mt-2">
+                    <select id="memoFont" onchange="updatePreview()" class="w-full p-2 rounded-lg text-[11px]">
+                        <option value="'MissedSimsim'">그리운 심심체</option>
+                        <option value="'YoonChoWooSan'">윤초록우산어린이 만세</option>
+                        <option value="'KyoboHandwriting2020ParkDoYeon'">교보손글씨 박도연</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 2. Content -->
+            <div class="space-y-4">
+                <h2 class="ui-text font-bold text-gray-400 uppercase border-b pb-1 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-sm">edit_square</span> 2. 내용 편집
+                </h2>
+                
+                <div id="fieldTitle">
+                    <label class="ui-text block mb-1">제목</label>
+                    <input type="text" id="inputTitle" oninput="updatePreview()" placeholder="제목 입력" class="w-full p-2.5 rounded-lg">
+                </div>
+
+                <div>
+                    <label class="ui-text block mb-1">이미지 (단서 사진)</label>
+                    <div class="flex gap-2">
+                        <label for="inputImage" class="flex-1 text-center bg-gray-50 border border-dashed border-gray-300 py-2 rounded-lg cursor-pointer hover:bg-gray-100 ui-text flex items-center justify-center gap-1">
+                            <span class="material-symbols-outlined text-sm">add_photo_alternate</span> 파일 선택
+                        </label>
+                        <input type="file" id="inputImage" onchange="handleImageUpload(this)" accept="image/*" class="hidden">
+                        <button onclick="removeImage()" id="btnRemoveImg" class="hidden bg-red-50 text-red-500 px-3 rounded-lg border border-red-100 text-xs">삭제</button>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="ui-text block mb-1">본문 내용</label>
+                    <textarea id="inputContent" oninput="updatePreview()" rows="6" placeholder="내용을 입력하세요." class="w-full p-2.5 rounded-lg resize-none text-sm"></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="ui-text block mb-1" id="labelAlign">텍스트 정렬</label>
+                        <select id="textAlign" onchange="updatePreview()" class="w-full p-2 rounded-lg">
+                            <option value="left">왼쪽</option>
+                            <option value="center">가운데</option>
+                            <option value="right">오른쪽</option>
+                        </select>
+                    </div>
+                    <div id="fieldIcon">
+                        <label class="ui-text block mb-1">상태 아이콘</label>
+                        <select id="inputStamp" onchange="updatePreview()" class="w-full p-2 rounded-lg">
+                            <option value="">없음</option>
+                            <option value="priority_high">중요(!)</option>
+                            <option value="lock">잠김</option>
+                            <option value="search">조사중</option>
+                            <option value="skull">위험</option>
+                            <option value="help">의문(?)</option>
+                            <option value="visibility_off">숨김</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Size & Texture -->
+            <div class="space-y-4">
+                <h2 class="ui-text font-bold text-gray-400 uppercase border-b pb-1 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-sm">settings</span> 3. 디자인 및 설정
+                </h2>
+                
+                <div id="fieldTexture">
+                    <label class="ui-text block mb-1">배경 질감</label>
+                    <select id="paperTexture" onchange="updatePreview()" class="w-full p-2 rounded-lg">
+                        <option value="">질감 없음</option>
+                        <option value="texture-parchment">밝은 양피지</option>
+                        <option value="texture-grid">모눈종이</option>
+                        <option value="texture-ruled">줄노트 (본문)</option>
+                        <option value="texture-fiber">고급 수입지</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="ui-text block mb-1">크기 프리셋</label>
+                    <div class="grid grid-cols-3 gap-1">
+                        <button onclick="setSize(380, 520)" class="bg-gray-100 py-1 rounded text-[10px] hover:bg-gray-200">기본</button>
+                        <button onclick="setSize(500, 500)" class="bg-gray-100 py-1 rounded text-[10px] hover:bg-gray-200">정사각</button>
+                        <button onclick="setSize(600, 400)" class="bg-gray-100 py-1 rounded text-[10px] hover:bg-gray-200">가로형</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="ui-text block mb-1">가로 (px)</label>
+                        <input type="number" id="imgWidth" value="380" oninput="updatePreview()" class="w-full p-2 rounded-lg wheel-input">
+                    </div>
+                    <div>
+                        <label class="ui-text block mb-1">세로 (px)</label>
+                        <input type="number" id="imgHeight" value="520" oninput="updatePreview()" class="w-full p-2 rounded-lg wheel-input">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="ui-text block mb-1">배경색</label>
+                        <input type="color" id="colorBg" value="#ffffff" oninput="updatePreview()" class="w-full h-10 rounded-lg cursor-pointer">
+                    </div>
+                    <div>
+                        <label class="ui-text block mb-1" id="labelTextColor">글자색</label>
+                        <input type="color" id="colorText" value="#333333" oninput="updatePreview()" class="w-full h-10 rounded-lg cursor-pointer">
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="addHandoutToList()" class="w-full bg-pink-500 text-white font-bold py-3 rounded-xl hover:bg-pink-600 transition-all shadow-md active:scale-95 text-sm flex items-center justify-center gap-2">
+                <span class="material-symbols-outlined">add_box</span> 현재 핸드아웃 보관
+            </button>
+        </aside>
+
+        <!-- Center: Preview -->
+        <section class="flex-1 bg-gray-50 flex items-center justify-center p-8 overflow-auto">
+            <div id="captureArea" class="handout-container theme-modern">
+                <div id="themeWrapper" class="h-full w-full flex flex-col overflow-hidden">
+                    <!-- Dynamic Content -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Right: List -->
+        <aside class="w-72 bg-white border-l border-gray-200 overflow-y-auto p-5 flex flex-col">
+            <h2 class="ui-text font-bold text-gray-400 uppercase border-b pb-1 mb-4 flex items-center gap-1">
+                <span class="material-symbols-outlined text-sm">inventory_2</span> 보관 목록
+            </h2>
+            <div class="flex-1 overflow-y-auto">
+                <ul id="handoutList" class="space-y-3"></ul>
+            </div>
+            <div class="mt-4 pt-4 border-t border-gray-100 space-y-2">
+                <button onclick="saveAllAsImages()" class="w-full bg-gray-800 text-white text-xs py-3 rounded-xl flex items-center justify-center gap-1 hover:bg-black transition-colors">
+                    <span class="material-symbols-outlined text-sm">archive</span> 전체 일괄 저장
+                </button>
+                <button onclick="clearAllData()" class="w-full text-red-400 text-[10px] py-1 hover:underline flex items-center justify-center gap-1">
+                    <span class="material-symbols-outlined text-xs">delete</span> 목록 비우기
+                </button>
+            </div>
+        </aside>
+    </main>
+
+    <!-- Preview Tooltip -->
+    <div id="hoverPreview" class="hover-preview rounded-lg">
+        <p class="font-bold border-b mb-1 pb-1 text-pink-500" id="hpTitle"></p>
+        <div id="hpContent" class="whitespace-pre-line text-gray-500"></div>
+    </div>
+
+    <!-- Toast UI -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-6 py-4 rounded-2xl text-xs shadow-2xl transition-all opacity-0 pointer-events-none z-50">
+        <span id="toastMsg">메시지</span>
+    </div>
+
+    <script>
+        let handouts = [];
+        let currentUploadedImg = null;
+        const toast = document.getElementById('toast');
+        const toastMsg = document.getElementById('toastMsg');
+        const hp = document.getElementById('hoverPreview');
+
+        function showToast(msg) {
+            toastMsg.innerText = msg;
+            toast.style.opacity = '1';
+            setTimeout(() => toast.style.opacity = '0', 2000);
+        }
+
+        function handleImageUpload(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    currentUploadedImg = e.target.result;
+                    document.getElementById('btnRemoveImg').classList.remove('hidden');
+                    updatePreview();
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function removeImage() {
+            currentUploadedImg = null;
+            document.getElementById('inputImage').value = "";
+            document.getElementById('btnRemoveImg').classList.add('hidden');
+            updatePreview();
+        }
+
+        function setSize(w, h) {
+            document.getElementById('imgWidth').value = w;
+            document.getElementById('imgHeight').value = h;
+            updatePreview();
+        }
+
+        function handleThemeChange() {
+            const theme = document.getElementById('themeSelect').value;
+            const memoFontGroup = document.getElementById('memoFontGroup');
+            const fieldTitle = document.getElementById('fieldTitle');
+            const fieldIcon = document.getElementById('fieldIcon');
+            const fieldTexture = document.getElementById('fieldTexture');
+            const alignSelect = document.getElementById('textAlign');
+            const labelAlign = document.getElementById('labelAlign');
+            const labelTextColor = document.getElementById('labelTextColor');
+
+            // Reset visibility
+            memoFontGroup.classList.add('hidden');
+            fieldTitle.style.display = 'block';
+            fieldIcon.style.display = 'block';
+            fieldTexture.style.display = 'none'; // Default hidden
+            labelAlign.innerText = '텍스트 정렬';
+            labelTextColor.innerText = '글자색';
+
+            // Show texture only for modern and memo
+            if (theme === 'theme-modern' || theme === 'theme-memo') {
+                fieldTexture.style.display = 'block';
+            }
+            
+            if (theme === 'theme-message') {
+                fieldTitle.style.display = 'none';
+                fieldIcon.style.display = 'none';
+                labelAlign.innerText = '말풍선 위치';
+                labelTextColor.innerText = '말풍선 색 (우측)';
+                alignSelect.innerHTML = `<option value="left">좌측 (수신)</option><option value="right">우측 (발신)</option>`;
+            } else {
+                alignSelect.innerHTML = `<option value="left">왼쪽</option><option value="center">가운데</option><option value="right">오른쪽</option>`;
+            }
+
+            if (theme === 'theme-memo') {
+                memoFontGroup.classList.remove('hidden');
+            }
+
+            updatePreview();
+        }
+
+        function updatePreview() {
+            const title = document.getElementById('inputTitle').value || "제목 없음";
+            const content = (document.getElementById('inputContent').value || "내용을 입력하세요.").trim();
+            const align = document.getElementById('textAlign').value;
+            const icon = document.getElementById('inputStamp').value;
+            const theme = document.getElementById('themeSelect').value;
+            const texture = document.getElementById('paperTexture').value;
+            
+            const w = document.getElementById('imgWidth').value || 380;
+            const h = document.getElementById('imgHeight').value || 520;
+            const customBg = document.getElementById('colorBg').value;
+            const customText = document.getElementById('colorText').value;
+
+            const container = document.getElementById('captureArea');
+            const wrapper = document.getElementById('themeWrapper');
+            
+            // Texture is only applied if it's modern or memo
+            const activeTexture = (theme === 'theme-modern' || theme === 'theme-memo') ? texture : '';
+            
+            container.style.width = w + 'px';
+            container.style.height = h + 'px';
+            container.className = `handout-container ${theme} ${activeTexture}`;
+            container.style.backgroundColor = customBg;
+            container.style.color = (theme === 'theme-message') ? '' : customText;
+
+            const imgHtml = currentUploadedImg ? `<div class="handout-image-container"><img src="${currentUploadedImg}"></div>` : '';
+            const iconHtml = icon ? `<span class="material-symbols-outlined text-4xl" style="color: ${customText}; opacity:0.8">${icon}</span>` : '';
+
+            let innerHTML = '';
+            
+            if (theme === 'theme-system') {
+                innerHTML = `
+                    <div class="system-win-header">
+                        <span class="text-xs font-semibold text-gray-500">${title}</span>
+                        <div class="flex gap-1.5 items-center">
+                            <span class="w-3 h-3 rounded-full bg-gray-200"></span>
+                            <span class="w-3 h-3 rounded-full bg-gray-200"></span>
+                            <span class="material-symbols-outlined text-sm text-gray-400">close</span>
+                        </div>
+                    </div>
+                    <div class="p-8 flex-1 overflow-auto m-2 rounded-xl bg-white/60 border border-white/40 shadow-inner" style="text-align: ${align}">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-lg font-bold" style="color: #333; font-family: 'Segoe UI', sans-serif !important;">${title}</h3>
+                            ${iconHtml}
+                        </div>
+                        ${imgHtml}
+                        <div class="whitespace-pre-wrap text-sm leading-relaxed" style="color:#444; font-family: 'Segoe UI', sans-serif !important;">${content}</div>
+                    </div>
+                `;
+            } else if (theme === 'theme-message') {
+                const bubbles = content.split('\n').filter(l => l.trim() !== "");
+                innerHTML = `
+                    <div class="phone-status-bar" style="color: ${customBg === '#ffffff' ? '#000' : customBg}">
+                        <div class="flex gap-1.5 items-center">
+                            <span class="material-symbols-outlined text-sm">signal_cellular_alt</span>
+                            <span class="material-symbols-outlined text-sm">wifi</span>
+                            <span class="material-symbols-outlined text-sm">battery_full</span>
+                        </div>
+                    </div>
+                    <div class="h-full flex flex-col pb-10 overflow-auto">
+                        <div class="bubble-group" style="font-family: 'Noto Sans KR', sans-serif !important;">
+                            ${imgHtml}
+                            ${bubbles.map(b => `<div class="bubble bubble-${align}" style="${align === 'right' ? 'background-color:'+customText+';color:'+customBg : 'background-color:#f1f1f1;color:#000'}">${b}</div>`).join('')}
+                        </div>
+                    </div>
+                `;
+            } else if (theme === 'theme-email') {
+                innerHTML = `
+                    <div class="email-top" style="font-family: 'Noto Sans KR', sans-serif !important;">
+                        <div class="flex gap-2 font-bold opacity-60">Subject: <span class="font-normal opacity-100 text-gray-800">${title}</span></div>
+                    </div>
+                    <div class="email-body flex-1 overflow-auto whitespace-pre-wrap text-sm leading-relaxed" style="text-align: ${align}; font-family: 'Noto Sans KR', sans-serif !important;">
+                        ${imgHtml}
+                        ${content}
+                    </div>
+                `;
+            } else if (theme === 'theme-memo') {
+                const memoFont = document.getElementById('memoFont').value;
+                innerHTML = `
+                    <div class="tape"></div>
+                    <div class="p-10 flex-1 flex flex-col overflow-hidden" style="font-family: ${memoFont} !important;">
+                        <div class="flex justify-between items-start mb-6 border-b-2 pb-3" style="border-color: ${customText}44">
+                            <h3 class="text-2xl font-bold" style="text-align: ${align}; width:100%">${title}</h3>
+                            ${iconHtml}
+                        </div>
+                        ${imgHtml}
+                        <div style="text-align: ${align}" class="flex-1 whitespace-pre-wrap text-lg leading-relaxed ${activeTexture === 'texture-ruled' ? 'texture-ruled' : ''}">${content}</div>
+                    </div>
+                `;
+            } else {
+                // Modern
+                innerHTML = `
+                    <div class="p-10 flex-1 flex flex-col overflow-hidden" style="font-family: 'Noto Sans KR', sans-serif !important;">
+                        <div class="flex justify-between items-start mb-10">
+                            <div class="text-3xl font-bold border-l-8 pl-5" style="text-align: ${align}; width:100%; border-color: ${customText}">${title}</div>
+                            ${iconHtml ? `<div class="ml-4">${iconHtml}</div>` : ''}
+                        </div>
+                        ${imgHtml}
+                        <div class="flex-1 whitespace-pre-wrap text-base leading-loose" style="text-align: ${align}">${content}</div>
+                    </div>
+                `;
+            }
+            wrapper.innerHTML = innerHTML;
+        }
+
+        // Wheel Size Control
+        document.querySelectorAll('.wheel-input').forEach(input => {
+            input.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                let val = parseInt(input.value) || 0;
+                val += e.deltaY < 0 ? 10 : -10;
+                input.value = Math.max(100, Math.min(2000, val));
+                updatePreview();
+            });
+        });
+
+        // Local Storage
+        function saveToLocal() { localStorage.setItem('trpg_handouts_v9', JSON.stringify(handouts)); }
+        function loadFromLocal() {
+            const saved = localStorage.getItem('trpg_handouts_v9');
+            if (saved) { handouts = JSON.parse(saved); renderList(); }
+        }
+
+        function clearAllData() {
+            if(confirm("보관된 모든 핸드아웃을 삭제할까요?")) {
+                handouts = [];
+                localStorage.removeItem('trpg_handouts_v9');
+                renderList();
+                showToast("목록이 초기화되었습니다.");
+            }
+        }
+
+        function addHandoutToList() {
+            const h = {
+                id: Date.now(),
+                title: document.getElementById('inputTitle').value || "제목 없음",
+                content: document.getElementById('inputContent').value,
+                align: document.getElementById('textAlign').value,
+                icon: document.getElementById('inputStamp').value,
+                theme: document.getElementById('themeSelect').value,
+                bg: document.getElementById('colorBg').value,
+                text: document.getElementById('colorText').value,
+                w: document.getElementById('imgWidth').value,
+                h: document.getElementById('imgHeight').value,
+                memoFont: document.getElementById('memoFont').value,
+                texture: document.getElementById('paperTexture').value,
+                img: currentUploadedImg
+            };
+            handouts.push(h);
+            renderList();
+            saveToLocal();
+            showToast('목록에 추가되었습니다.');
+        }
+
+        function renderList() {
+            const list = document.getElementById('handoutList');
+            list.innerHTML = handouts.map((h, idx) => `
+                <li class="bg-gray-50 p-3 rounded-xl border border-gray-200 flex justify-between items-center group cursor-pointer hover:bg-white hover:border-pink-200 transition-all shadow-sm" 
+                    onmouseenter="showPreview(event, ${h.id})" onmouseleave="hidePreview()" onclick="loadHandout(${h.id})">
+                    <div class="truncate text-xs flex-1">
+                        <span class="text-pink-500 font-bold mr-1">#${idx + 1}</span>
+                        <span class="text-gray-700 font-semibold">${h.title}</span>
+                    </div>
+                    <button onclick="event.stopPropagation(); removeHandout(${h.id})" class="opacity-0 group-hover:opacity-100 material-symbols-outlined text-sm text-red-300 hover:text-red-500 transition-colors">close</button>
+                </li>
+            `).join('');
+        }
+
+        function showPreview(e, id) {
+            const h = handouts.find(item => item.id === id);
+            if(h) {
+                document.getElementById('hpTitle').innerText = h.title;
+                document.getElementById('hpContent').innerText = h.content.substring(0, 40) + "...";
+                hp.style.display = 'block';
+                hp.style.left = (e.clientX - 260) + 'px';
+                hp.style.top = (e.clientY + 10) + 'px';
+            }
+        }
+        function hidePreview() { hp.style.display = 'none'; }
+
+        function loadHandout(id) {
+            const h = handouts.find(item => item.id === id);
+            if(h) {
+                document.getElementById('themeSelect').value = h.theme;
+                handleThemeChange();
+                document.getElementById('inputTitle').value = h.title;
+                document.getElementById('inputContent').value = h.content;
+                document.getElementById('textAlign').value = h.align;
+                document.getElementById('inputStamp').value = h.icon;
+                document.getElementById('colorBg').value = h.bg;
+                document.getElementById('colorText').value = h.text;
+                document.getElementById('imgWidth').value = h.w;
+                document.getElementById('imgHeight').value = h.h;
+                document.getElementById('paperTexture').value = h.texture || "";
+                currentUploadedImg = h.img;
+                if(currentUploadedImg) document.getElementById('btnRemoveImg').classList.remove('hidden');
+                else document.getElementById('btnRemoveImg').classList.add('hidden');
+                if(h.theme === 'theme-memo') document.getElementById('memoFont').value = h.memoFont;
+                updatePreview();
+            }
+        }
+
+        function removeHandout(id) {
+            handouts = handouts.filter(h => h.id !== id);
+            renderList();
+            saveToLocal();
+        }
+
+        async function saveAsImage() {
+            const area = document.getElementById('captureArea');
+            const canvas = await html2canvas(area, { scale: 2, backgroundColor: null, useCORS: true });
+            const link = document.createElement('a');
+            link.download = `handout_${Date.now()}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+            showToast('이미지가 저장되었습니다.');
+        }
+
+        async function saveAllAsImages() {
+            if (handouts.length === 0) return showToast('목록이 비어있습니다.');
+            showToast('전체 저장을 시작합니다...');
+            for (let h of handouts) {
+                loadHandout(h.id);
+                await new Promise(r => setTimeout(r, 400));
+                const canvas = await html2canvas(document.getElementById('captureArea'), { scale: 2, backgroundColor: null, useCORS: true });
+                const link = document.createElement('a');
+                link.download = `handout_${h.title}.png`;
+                link.href = canvas.toDataURL();
+                link.click();
+                await new Promise(r => setTimeout(r, 400));
+            }
+            showToast('모든 이미지가 저장되었습니다.');
+        }
+
+        async function copyToClipboard() {
+            const area = document.getElementById('captureArea');
+            const canvas = await html2canvas(area, { scale: 2, backgroundColor: null, useCORS: true });
+            canvas.toBlob(blob => {
+                const item = new ClipboardItem({ 'image/png': blob });
+                navigator.clipboard.write([item]).then(() => showToast('클립보드에 복사되었습니다.'));
+            });
+        }
+
+        window.onload = () => { handleThemeChange(); loadFromLocal(); };
+    </script>
+</body>
+</html>
