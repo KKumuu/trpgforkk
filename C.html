@@ -63,6 +63,7 @@
             font-family: var(--receipt-font-title);
             color: var(--receipt-accent);
             line-height: 1.1;
+            word-break: keep-all;
         }
 
         .zigzag-bottom {
@@ -89,6 +90,7 @@
             padding: 1.5rem;
         }
 
+        /* Minimal Button UI */
         .btn-line {
             display: flex;
             flex-direction: column;
@@ -140,9 +142,17 @@
             border-radius: 50%;
             cursor: pointer;
             padding: 0;
+            overflow: hidden;
         }
         input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
         input[type="color"]::-webkit-color-swatch { border: none; }
+
+        .barcode-strip { 
+            height: 50px; 
+            width: 100%; 
+            display: block;
+            margin: 0 auto;
+        }
 
         #modalOverlay {
             display: none;
@@ -167,7 +177,7 @@
 </head>
 <body class="p-4 md:p-6 min-h-screen">
 
-    <!-- Custom Reset Modal -->
+    <!-- Custom Modal -->
     <div id="modalOverlay">
         <div class="modal-content">
             <span class="material-symbols-outlined text-5xl text-red-500 mb-4">warning</span>
@@ -185,8 +195,8 @@
         <!-- Left Side: Form -->
         <div class="lg:col-span-3 space-y-4">
             
-            <!-- Settings & Customization -->
-            <div class="input-card bg-white border-gray-200">
+            <!-- Settings -->
+            <div class="input-card bg-white border-gray-200 shadow-sm">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-lg font-bold flex items-center gap-2 text-gray-700">
                         <span class="material-symbols-outlined">settings</span> 설정 및 디자인
@@ -204,18 +214,18 @@
 
                 <div class="grid grid-cols-2 gap-3 mb-3">
                     <div>
-                        <label class="text-[10px] font-bold text-gray-400 mb-1 block ml-1">세션 제목 (강조됨)</label>
+                        <label class="text-[10px] font-bold text-gray-400 mb-1 block ml-1 uppercase">Session Title</label>
                         <input type="text" id="sessionTitle" placeholder="TITLE" class="w-full p-2 border-2 border-gray-200 rounded-lg outline-none focus:border-pink-400 text-sm">
                     </div>
                     <div>
-                        <label class="text-[10px] font-bold text-gray-400 mb-1 block ml-1">부제목</label>
+                        <label class="text-[10px] font-bold text-gray-400 mb-1 block ml-1 uppercase">Subtitle</label>
                         <input type="text" id="sessionSubtitle" placeholder="Subtitle" class="w-full p-2 border-2 border-gray-200 rounded-lg outline-none focus:border-pink-400 text-sm">
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-3 mb-3">
                     <div>
-                        <label class="text-[10px] font-bold text-gray-400 mb-1 block ml-1">영수증 폰트 테마</label>
+                        <label class="text-[10px] font-bold text-gray-400 mb-1 block ml-1 uppercase">Font Theme</label>
                         <select id="fontPresetSelect" onchange="applyFontPreset(this.value)" class="w-full p-2 border-2 border-gray-200 rounded-lg outline-none focus:border-pink-400 text-xs font-bold">
                             <option value="1">Preset 1: Galmuri9</option>
                             <option value="2">Preset 2: Casual (BBH Bartle + Noto)</option>
@@ -223,24 +233,24 @@
                         </select>
                     </div>
                     <div>
-                        <label class="text-[10px] font-bold text-gray-400 mb-1 block ml-1">설명 문구 (최하단)</label>
+                        <label class="text-[10px] font-bold text-gray-400 mb-1 block ml-1 uppercase">Footer Text</label>
                         <input type="text" id="footerMessageInput" value="call of cthulhu 7th edition fanmade scenario" class="w-full p-2 border-2 border-gray-200 rounded-lg outline-none focus:border-pink-400 text-xs">
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-3 mb-4">
                     <div>
-                        <label class="text-[10px] font-bold text-gray-400 mb-1 block ml-1">인사 문구</label>
+                        <label class="text-[10px] font-bold text-gray-400 mb-1 block ml-1 uppercase">Greeting Message</label>
                         <input type="text" id="thankYouInput" value="Thank you for your session" class="w-full p-2 border-2 border-gray-200 rounded-lg outline-none focus:border-pink-400 text-xs">
                     </div>
                     <div>
-                        <label class="text-[10px] font-bold text-gray-400 mb-1 block ml-1">바코드 텍스트</label>
+                        <label class="text-[10px] font-bold text-gray-400 mb-1 block ml-1 uppercase">Barcode Label</label>
                         <input type="text" id="barcodeLabelInput" value="TRPG-BGM-STORE-2025" class="w-full p-2 border-2 border-gray-200 rounded-lg outline-none focus:border-pink-400 text-xs">
                     </div>
                 </div>
 
                 <div>
-                    <label class="text-[10px] font-bold text-gray-400 mb-1 block ml-1">GM 한 줄 메모 (영수증 하단)</label>
+                    <label class="text-[10px] font-bold text-gray-400 mb-1 block ml-1 uppercase">GM Memo</label>
                     <textarea id="gmMemoInput" rows="1" placeholder="세션을 기념하는 짧은 메모를 남겨주세요." class="w-full p-2 border-2 border-gray-200 rounded-lg outline-none focus:border-pink-400 text-xs resize-none"></textarea>
                 </div>
                 
@@ -257,7 +267,7 @@
             </div>
 
             <!-- BGM Entry -->
-            <div class="input-card">
+            <div class="input-card shadow-sm">
                 <h2 class="text-lg mb-4 font-bold flex items-center gap-2 text-gray-700">
                     <span class="material-symbols-outlined">library_music</span> BGM 추가
                 </h2>
@@ -267,7 +277,7 @@
                         <input type="text" id="ytLink" placeholder="https://..." class="w-full p-2 border-2 border-accent/20 rounded-lg outline-none focus:border-accent text-sm bg-white/50">
                     </div>
                     <div>
-                        <label class="text-[10px] font-bold text-gray-400 mb-1 block ml-1 uppercase">Scene Quick Tags</label>
+                        <label class="text-[10px] font-bold text-gray-400 mb-1 block ml-1 uppercase">Quick Scene Tags</label>
                         <div class="flex flex-wrap gap-1">
                             <button onclick="setQuickTag('일상')" class="quick-tag">#일상</button>
                             <button onclick="setQuickTag('시작')" class="quick-tag">#시작</button>
@@ -293,7 +303,7 @@
                 </div>
 
                 <div class="mb-4">
-                    <label class="text-[10px] font-bold text-gray-400 mb-1 block ml-1 uppercase">Scene Detail</label>
+                    <label class="text-[10px] font-bold text-gray-400 mb-1 block ml-1 uppercase">Manual Scene Detail</label>
                     <input type="text" id="sceneTag" placeholder="상황을 입력하세요" class="w-full p-2 border-2 border-accent/20 rounded-lg outline-none focus:border-accent text-sm bg-white/50">
                 </div>
 
@@ -315,19 +325,19 @@
             </div>
         </div>
 
-        <!-- Right Side: Preview -->
+        <!-- Right Side: Preview Area -->
         <div class="lg:col-span-2 flex justify-center items-start sticky top-6">
             <div id="captureArea">
                 <div id="receipt" class="receipt-container">
                     <div class="text-center mb-6">
-                        <h1 class="text-[10px] font-bold mb-3 leading-none opacity-50 uppercase tracking-[0.2em]">BGM PLAYLIST</h1>
+                        <h1 class="text-[9px] font-bold mb-3 leading-none opacity-40 uppercase tracking-[0.2em]">BGM PLAYLIST</h1>
                         <p id="displaySessionTitle" class="text-3xl font-bold receipt-title">TITLE</p>
                         <p id="displaySubtitle" class="text-xs opacity-60 mt-2">Subtitle</p>
                     </div>
 
                     <div class="dotted-line"></div>
 
-                    <div class="text-[9px] grid grid-cols-12 gap-2 font-bold mb-1 px-1 opacity-60 uppercase">
+                    <div class="text-[9px] grid grid-cols-12 gap-2 font-bold mb-1 px-1 opacity-50 uppercase">
                         <div class="col-span-6 text-left">No. item / title</div>
                         <div class="col-span-2 text-center">time</div>
                         <div class="col-span-4 text-right">scene</div>
@@ -389,11 +399,10 @@
             bindInputToDisplay('footerMessageInput', 'displayFooterMessage', "call of cthulhu 7th edition fanmade scenario");
             bindInputToDisplay('barcodeLabelInput', 'displayBarcodeLabel', "TRPG-BGM-STORE-2025");
             
-            // GM Memo display logic
+            // GM Memo
             const memoInput = document.getElementById('gmMemoInput');
             const memoArea = document.getElementById('memoArea');
             const memoDisplay = document.getElementById('displayGmMemo');
-            
             memoInput.oninput = (e) => {
                 const val = e.target.value;
                 memoDisplay.innerText = val;
@@ -423,7 +432,7 @@
 
         function updateColor(varName, colorValue) {
             document.documentElement.style.setProperty(varName, colorValue);
-            generateDenseBarcode();
+            generateDenseBarcode(); // Refresh barcode color
             renderItems();
         }
 
@@ -515,15 +524,14 @@
                     document.getElementById('accentColorPicker').value = s.colors.accent;
                 }
                 
-                // Sync display
                 document.getElementById('displaySessionTitle').innerText = s.title || "TITLE";
                 document.getElementById('displaySubtitle').innerText = s.subtitle || "Subtitle";
                 document.getElementById('displayThankYou').innerText = s.thankYou || "Thank you for your session";
                 document.getElementById('displayFooterMessage').innerText = s.footer || "call of cthulhu 7th edition fanmade scenario";
                 document.getElementById('displayBarcodeLabel').innerText = s.barcodeLabel || "TRPG-BGM-STORE-2025";
                 
-                const memoArea = document.getElementById('memoArea');
                 const memoDisplay = document.getElementById('displayGmMemo');
+                const memoArea = document.getElementById('memoArea');
                 memoDisplay.innerText = s.gmMemo || "";
                 if (!s.gmMemo) memoArea.classList.add('hidden');
                 else memoArea.classList.remove('hidden');
@@ -680,21 +688,28 @@
             const noBg = document.getElementById('noBgToggle').checked;
             const originalShadow = receipt.style.boxShadow;
             const originalBg = receipt.style.backgroundColor;
+            
             receipt.style.boxShadow = 'none';
             if (noBg) {
                 receipt.style.backgroundColor = 'transparent';
                 document.getElementById('zigzagBottom').style.opacity = '0';
             }
+
             showToast("이미지 생성 중...");
             try {
-                const canvas = await html2canvas(captureArea, { backgroundColor: null, scale: 3, useCORS: true });
+                const canvas = await html2canvas(captureArea, {
+                    backgroundColor: null,
+                    scale: 3,
+                    useCORS: true
+                });
                 const link = document.createElement('a');
-                link.download = `BGM_Receipt_${Date.now()}.png`;
+                link.download = `TRPG_BGM_Receipt_${Date.now()}.png`;
                 link.href = canvas.toDataURL('image/png');
                 link.click();
                 showToast("저장 완료!");
-            } catch (err) { showToast("저장 실패"); }
-            finally {
+            } catch (err) {
+                showToast("저장 실패");
+            } finally {
                 receipt.style.boxShadow = originalShadow;
                 receipt.style.backgroundColor = originalBg;
                 document.getElementById('zigzagBottom').style.opacity = '1';
