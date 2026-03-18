@@ -309,7 +309,7 @@ export default function App() {
   const [files, setFiles] = useState([]);
   const [selectedFileId, setSelectedFileId] = useState(null); 
   const [isProcessingBg, setIsProcessingBg] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false); // 로딩 상태 추가
+  const [isDownloading, setIsDownloading] = useState(false);
   
   const [globalScale, setGlobalScale] = useState(1);
   const [globalPosition, setGlobalPosition] = useState({ x: 0, y: 0 });
@@ -530,7 +530,7 @@ export default function App() {
 
   const downloadAll = async () => {
     if (!isZipLoaded || files.length === 0) return;
-    setIsDownloading(true); // 로딩 켜기
+    setIsDownloading(true); 
     const zip = new window.JSZip();
     
     const promises = files.map(fileItem => {
@@ -560,7 +560,7 @@ export default function App() {
     } catch (e) {
       console.error("ZIP 생성 오류:", e);
     } finally {
-      setIsDownloading(false); // 로딩 끄기
+      setIsDownloading(false); 
     }
   };
 
@@ -576,8 +576,7 @@ export default function App() {
               <span className="text-gray-800">✂️</span> CCFolia 스탠딩 크롭기
             </h1>
             <p className="text-xs md:text-sm text-gray-500 mt-1 md:mt-2 font-medium">
-              스탠딩 포트레이트 일괄 크롭기 <br>
-드래그/휠/방향키로 위치 및 크기를 조절할 수 있습니다.
+              스탠딩 포트레이트 일괄 크롭기 드래그/휠/방향키로 위치 및 크기를 조절할 수 있습니다.
             </p>
           </div>
 
