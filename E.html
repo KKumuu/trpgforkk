@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>CCFolia 스탠딩 크롭기</title>
 
-  <!-- 파비콘 적용 (GitHub에 올린 favicon.png 연결) -->
+  <!-- 파비콘 적용 -->
   <link rel="icon" type="image/png" href="./favicon.png">
 
   <!-- 디자인 및 필수 기능(React, Tailwind) 불러오기 -->
@@ -16,12 +16,9 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body class="bg-[#eef0f2]">
-  <!-- 리액트 프로그램이 화면에 그려질 빈 캔버스 -->
   <div id="root"></div>
 
-  <!-- 실제 리액트 코드 (app.jsx의 내용을 이 안에 넣습니다) -->
   <script type="text/babel">
-    // React 기능 꺼내기
     const { useState, useEffect, useRef, useCallback } = React;
 
     // --- JSZip 동적 로드 훅 ---
@@ -40,19 +37,40 @@
       return isLoaded;
     };
 
-    // --- 아이콘 컴포넌트 ---
     const Icon = ({ path, title, className = "w-5 h-5" }) => (
       <svg className={`${className} inline-block`} fill="none" stroke="currentColor" viewBox="0 0 24 24" title={title}>
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={path} />
       </svg>
     );
 
-    // --- 출력 사이즈 고정 ---
     const OUTPUT_WIDTH = 480;
     const OUTPUT_HEIGHT = 720;
 
+    // --- 부드러운 둥근 테두리를 생성하는 SVG 필터 컴포넌트 ---
+    const RoundedOutlineFilter = ({ id, thickness, color }) => {
+      if (thickness <= 0) return null;
+      // 두께에 따라 블러 강도 조절
+      const blurStdDev = thickness * 0.45; 
+      
+      return (
+        <filter id={id} x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur in="SourceAlpha" stdDeviation={blurStdDev} result="blur" />
+          {/* slope를 올려 큰 두께에서도 경계가 선명하게 유지되도록 조절 */}
+          <feComponentTransfer in="blur" result="thickened">
+            <feFuncA type="linear" slope="50" intercept="-1.5" />
+          </feComponentTransfer>
+          <feFlood floodColor={color} result="color" />
+          <feComposite in="color" in2="thickened" operator="in" result="outline" />
+          <feMerge>
+            <feMergeNode in="outline" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      );
+    };
+
     // --- 인게임 미리보기 컴포넌트 ---
-    const GamePreview = ({ fileItem, scale, position, onPositionChange, onScaleChange }) => {
+    const GamePreview = ({ fileItem, scale, position, onPositionChange, onScaleChange, outlineThickness, outlineColor }) => {
       const [imgDetails, setImgDetails] = useState(null);
       const [isDragging, setIsDragging] = useState(false);
       const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
@@ -189,6 +207,8 @@
                     <clipPath id="stand-clip">
                       <rect width={OUTPUT_WIDTH} height={OUTPUT_HEIGHT} />
                     </clipPath>
+                    {/* 실시간 테두리 적용을 위한 부드러운 SVG 필터 */}
+                    <RoundedOutlineFilter id="main-outline-filter" thickness={outlineThickness} color={outlineColor} />
                   </defs>
 
                   <rect width="1000" height="920" fill={bgColor} />
@@ -202,6 +222,7 @@
                         y={position.y} 
                         width={imgDetails.width * scale} 
                         height={imgDetails.height * scale} 
+                        filter={outlineThickness > 0 ? "url(#main-outline-filter)" : "none"}
                       />
                     </g>
                   )}
@@ -244,7 +265,7 @@
     };
 
     // --- 개별 이미지 에디터 컴포넌트 ---
-    const ImageItem = ({ fileItem, scale, position, isSelected, onSelect, onRemove, onDownload, registerGetBlob }) => {
+    const ImageItem = ({ fileItem, scale, position, isSelected, onSelect, onRemove, onDownload, registerGetBlob, outlineThickness, outlineColor }) => {
       const [imgDetails, setImgDetails] = useState(null);
 
       useEffect(() => {
@@ -260,18 +281,44 @@
           canvas.width = OUTPUT_WIDTH;
           canvas.height = OUTPUT_HEIGHT;
           const ctx = canvas.getContext('2d');
-          ctx.drawImage(
-            imgDetails.imgObj,
-            position.x, position.y,
-            imgDetails.width * scale, imgDetails.height * scale
-          );
+          
+          const drawImgWidth = imgDetails.width * scale;
+          const drawImgHeight = imgDetails.height * scale;
+
+          if (outlineThickness > 0) {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = OUTPUT_WIDTH;
+            tempCanvas.height = OUTPUT_HEIGHT;
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            // 1. 실루엣 생성
+            tempCtx.drawImage(imgDetails.imgObj, position.x, position.y, drawImgWidth, drawImgHeight);
+            tempCtx.globalCompositeOperation = "source-in";
+            tempCtx.fillStyle = outlineColor;
+            tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+
+            // 2. 두께가 커질수록(ex: 30px) 톱니바퀴 현상이 생기지 않도록 step을 더 촘촘히 쪼갬
+            const steps = Math.max(16, Math.ceil(outlineThickness * 2.5));
+            for (let i = 0; i < steps; i++) {
+              const angle = (i / steps) * Math.PI * 2;
+              const dx = Math.cos(angle) * outlineThickness;
+              const dy = Math.sin(angle) * outlineThickness;
+              ctx.drawImage(tempCanvas, dx, dy);
+            }
+          }
+
+          // 원본 이미지를 그 위에 덮어씌움
+          ctx.drawImage(imgDetails.imgObj, position.x, position.y, drawImgWidth, drawImgHeight);
+          
           canvas.toBlob((blob) => resolve({ blob, name: fileItem.file.name }), 'image/png');
         });
-      }, [imgDetails, position, scale, fileItem.file.name]);
+      }, [imgDetails, position, scale, fileItem.file.name, outlineThickness, outlineColor]);
 
       useEffect(() => {
         registerGetBlob(fileItem.id, getBlob);
       }, [getBlob, fileItem.id, registerGetBlob]);
+
+      const filterId = `outline-filter-list-${fileItem.id}`;
 
       return (
         <div 
@@ -302,6 +349,10 @@
 
             <div className={`w-full relative overflow-hidden rounded-lg border shadow-inner ${isSelected ? 'border-gray-400' : 'border-gray-300'}`} style={{ backgroundColor: '#e5e7eb' }}>
               <svg viewBox={`0 0 ${OUTPUT_WIDTH} ${OUTPUT_HEIGHT}`} className="w-full h-auto block">
+                <defs>
+                  {/* 썸네일용 부드러운 필터 생성 */}
+                  <RoundedOutlineFilter id={filterId} thickness={outlineThickness} color={outlineColor} />
+                </defs>
                 {imgDetails && (
                   <image 
                     href={imgDetails.src} 
@@ -309,6 +360,7 @@
                     y={position.y} 
                     width={imgDetails.width * scale} 
                     height={imgDetails.height * scale} 
+                    filter={outlineThickness > 0 ? `url(#${filterId})` : "none"}
                   />
                 )}
               </svg>
@@ -334,8 +386,12 @@
       const [globalScale, setGlobalScale] = useState(1);
       const [globalPosition, setGlobalPosition] = useState({ x: 0, y: 0 });
       const [isInitialized, setIsInitialized] = useState(false);
+      
+      // ✅ 상태: 테두리 두께 30px을 원활하게 수용하도록 유지
+      const [outlineThickness, setOutlineThickness] = useState(0);
+      const [outlineColor, setOutlineColor] = useState('#ffffff');
+      
       const fileInputRef = useRef(null);
-
       const getBlobFns = useRef({});
 
       const registerGetBlob = useCallback((id, fn) => {
@@ -387,7 +443,7 @@
               const isWhite = (i) => {
                 const r = data[i], g = data[i+1], b = data[i+2], a = data[i+3];
                 if (a === 0) return false;
-                const threshold = 240; 
+                const threshold = 235; 
                 return r > threshold && g > threshold && b > threshold &&
                        Math.abs(r - g) < 15 && Math.abs(r - b) < 15 && Math.abs(g - b) < 15;
               };
@@ -587,20 +643,21 @@
       return (
         <div className="flex flex-col md:flex-row h-screen w-full bg-[#eef0f2] font-sans overflow-hidden text-gray-900">
           
-          <div className="md:py-6 md:pl-6 w-full md:w-auto h-auto md:h-full flex-shrink-0 relative z-10 overflow-visible">
-            <aside className="w-full md:w-[340px] bg-white/95 backdrop-blur-md md:rounded-3xl flex flex-col h-[50vh] md:h-full shadow-[0_8px_30px_rgb(0,0,0,0.06)] border-b md:border border-gray-200/60 overflow-hidden">
+          <div className="md:py-6 md:pl-6 w-full md:w-[350px] h-auto md:h-full flex-shrink-0 relative z-10 overflow-visible">
+            <aside className="w-full bg-white/95 backdrop-blur-md md:rounded-3xl flex flex-col h-[50vh] md:h-full shadow-[0_8px_30px_rgb(0,0,0,0.06)] border-b md:border border-gray-200/60 overflow-hidden">
               
-              <div className="p-5 md:p-6 border-b border-gray-100 bg-white flex-shrink-0">
+              <div className="p-4 md:p-6 border-b border-gray-100 bg-white flex-shrink-0">
                 <h1 className="text-xl md:text-2xl font-black text-black tracking-tight flex items-center gap-2">
                   <span className="text-gray-800">✂️</span> CCFolia 스탠딩 크롭기
                 </h1>
                 <p className="text-xs md:text-sm text-gray-500 mt-1 md:mt-2 font-medium">
-                  스탠딩 포트레이트 일괄 크롭기 드래그/휠/방향키로 위치 및 크기를 조절할 수 있습니다.
+                  드래그/휠/방향키로 위치 및 크기를 조절할 수 있습니다.
                 </p>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-5 md:p-6 flex flex-col gap-6 md:gap-8 custom-scrollbar">
+              <div className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col gap-6 md:gap-8 custom-scrollbar">
                 
+                {/* 1. 파일 업로드 및 처리 */}
                 <div className="space-y-3">
                   <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">1. 파일 업로드 및 처리</h3>
                   <button 
@@ -620,32 +677,75 @@
                   <button 
                     onClick={handleRemoveWhiteBackground}
                     disabled={files.length === 0 || isProcessingBg}
-                    className={`w-full mt-2 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all border ${
+                    className={`w-full mt-2 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold transition-all border ${
                       files.length > 0 && !isProcessingBg
                         ? 'bg-white text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-400' 
                         : 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'
                     }`}
                   >
                     {isProcessingBg ? (
-                      <>⏳ 배경 추적 및 제거 중...</>
+                      <>⏳ 배경 지우는 중...</>
                     ) : (
                       <>
                         <Icon path="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" className="w-4 h-4" />
-                        업로드 이미지 흰색 배경 지우기
+                        업로드 이미지 배경 흰색 지우기
                       </>
                     )}
                   </button>
+                  <p className="text-[10px] text-gray-400 text-center">가장자리와 이어진 바깥쪽 흰색만 인식하여 지웁니다.</p>
                 </div>
 
+                {/* 2. 테두리(Outline) 효과 추가 */}
+                <div className={`space-y-3 ${files.length === 0 ? 'opacity-30 pointer-events-none' : ''}`}>
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">2. 테두리 효과 (Outline)</h3>
+                    <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full border border-gray-200">
+                      누끼 보정용 (둥글게)
+                    </span>
+                  </div>
+                  
+                  <div className="bg-gray-50/50 border border-gray-100 rounded-2xl p-4 space-y-4">
+                    <div className="flex justify-between items-center text-sm font-bold text-gray-700">
+                      <span>테두리 두께</span>
+                      <span className="text-black bg-white border border-gray-200 px-2 py-0.5 rounded-md min-w-[2.5rem] text-center">
+                        {outlineThickness}px
+                      </span>
+                    </div>
+                    {/* ✅ 최대 두께를 30px로 상향 조정 */}
+                    <input 
+                      type="range" min="0" max="30" step="1" 
+                      value={outlineThickness} 
+                      onChange={(e) => setOutlineThickness(parseInt(e.target.value))}
+                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black hover:accent-gray-800 transition-all"
+                    />
+
+                    <div className="flex justify-between items-center text-sm font-bold text-gray-700 pt-2 border-t border-gray-200">
+                      <span>테두리 색상</span>
+                      <label className="flex items-center gap-2 cursor-pointer hover:bg-gray-100 p-1.5 rounded-lg transition-colors">
+                        <span className="text-xs font-mono text-gray-500">{outlineColor.toUpperCase()}</span>
+                        <div className="relative w-6 h-6 rounded-full border border-gray-300 shadow-sm overflow-hidden" style={{ backgroundColor: outlineColor }}>
+                          <input 
+                            type="color" 
+                            value={outlineColor} 
+                            onChange={e => setOutlineColor(e.target.value)} 
+                            className="absolute opacity-0 w-10 h-10 -top-2 -left-2 cursor-pointer" 
+                          />
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. 위치 및 크기 조절 */}
                 <div className={`space-y-4 ${files.length === 0 ? 'opacity-30 pointer-events-none' : ''}`}>
-                  <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">2. 위치 및 크기 조절</h3>
+                  <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">3. 위치 및 크기 조절</h3>
                   
                   <button 
                     onClick={handleGlobalAutoTrim}
                     className="w-full flex items-center justify-center gap-2 bg-black text-white hover:bg-gray-800 py-3.5 rounded-2xl transition-all font-bold shadow-md hover:shadow-lg"
                   >
                     <Icon path="M13 10V3L4 14h7v7l9-11h-7z" className="w-5 h-5 text-gray-200" />
-                    선택 이미지 투명 여백 제거
+                    일괄 이미지 투명 여백 제거
                   </button>
                   
                   <button 
@@ -710,6 +810,8 @@
               position={globalPosition} 
               onPositionChange={setGlobalPosition}
               onScaleChange={handleGlobalScaleUpdate} 
+              outlineThickness={outlineThickness}
+              outlineColor={outlineColor}
             />
 
             {files.length > 0 && (
@@ -730,6 +832,8 @@
                       onRemove={removeFile}
                       onDownload={downloadSingle}
                       registerGetBlob={registerGetBlob}
+                      outlineThickness={outlineThickness}
+                      outlineColor={outlineColor}
                     />
                   ))}
                 </div>
@@ -740,7 +844,6 @@
       );
     }
 
-    // React 컴포넌트를 id="root" 인 곳에 렌더링
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<App />);
   </script>
