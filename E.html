@@ -1,15 +1,748 @@
 <!DOCTYPE html>
 <html lang="ko">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>CCFolia 스탠딩 크롭기</title>
-    
-    <!-- 여기에 넣어주시면 됩니다! -->
-    <link rel="icon" type="image/png" href="/trpgforkk/favicon.png">
-    
-  </head>
-  <body>
-    <div id="root"></div>
-  </body>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CCFolia 스탠딩 크롭기</title>
+
+  <!-- 파비콘 적용 (GitHub에 올린 favicon.png 연결) -->
+  <link rel="icon" type="image/png" href="./favicon.png">
+
+  <!-- 디자인 및 필수 기능(React, Tailwind) 불러오기 -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <!-- JSX 코드를 브라우저가 읽을 수 있게 변환해주는 도구 -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-[#eef0f2]">
+  <!-- 리액트 프로그램이 화면에 그려질 빈 캔버스 -->
+  <div id="root"></div>
+
+  <!-- 실제 리액트 코드 (app.jsx의 내용을 이 안에 넣습니다) -->
+  <script type="text/babel">
+    // React 기능 꺼내기
+    const { useState, useEffect, useRef, useCallback } = React;
+
+    // --- JSZip 동적 로드 훅 ---
+    const useJSZip = () => {
+      const [isLoaded, setIsLoaded] = useState(false);
+      useEffect(() => {
+        if (window.JSZip) {
+          setIsLoaded(true);
+          return;
+        }
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+        script.onload = () => setIsLoaded(true);
+        document.head.appendChild(script);
+      }, []);
+      return isLoaded;
+    };
+
+    // --- 아이콘 컴포넌트 ---
+    const Icon = ({ path, title, className = "w-5 h-5" }) => (
+      <svg className={`${className} inline-block`} fill="none" stroke="currentColor" viewBox="0 0 24 24" title={title}>
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={path} />
+      </svg>
+    );
+
+    // --- 출력 사이즈 고정 ---
+    const OUTPUT_WIDTH = 480;
+    const OUTPUT_HEIGHT = 720;
+
+    // --- 인게임 미리보기 컴포넌트 ---
+    const GamePreview = ({ fileItem, scale, position, onPositionChange, onScaleChange }) => {
+      const [imgDetails, setImgDetails] = useState(null);
+      const [isDragging, setIsDragging] = useState(false);
+      const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
+      const [showGrid, setShowGrid] = useState(false);
+      const [bgColor, setBgColor] = useState('#e5e7eb'); 
+      
+      const PRESET_COLORS = ['#e5e7eb', '#ffffff', '#1f2937', '#10b981', '#3b82f6']; 
+      const svgRef = useRef(null);
+
+      useEffect(() => {
+        if (!fileItem) {
+          setImgDetails(null);
+          return;
+        }
+        const img = new Image();
+        img.onload = () => {
+          setImgDetails({ src: fileItem.preview, width: img.width, height: img.height });
+        };
+        img.src = fileItem.preview;
+      }, [fileItem]);
+
+      useEffect(() => {
+        const container = svgRef.current;
+        if (!container) return;
+
+        const handleNativeWheel = (e) => {
+          if (!fileItem) return;
+          e.preventDefault(); 
+          const scaleAdjust = e.deltaY > 0 ? 0.95 : 1.05;
+          onScaleChange(Math.max(0.1, scale * scaleAdjust));
+        };
+
+        container.addEventListener('wheel', handleNativeWheel, { passive: false });
+        return () => {
+          container.removeEventListener('wheel', handleNativeWheel);
+        };
+      }, [fileItem, scale, onScaleChange]);
+
+      const handleMouseDown = (e) => {
+        if (!fileItem) return;
+        setIsDragging(true);
+        setLastMousePos({ x: e.clientX, y: e.clientY });
+      };
+
+      const handleMouseMove = (e) => {
+        if (!isDragging || !fileItem) return;
+        
+        const ratio = svgRef.current ? svgRef.current.clientWidth / 1000 : 1;
+        const dx = (e.clientX - lastMousePos.x) / ratio;
+        const dy = (e.clientY - lastMousePos.y) / ratio;
+
+        onPositionChange(prev => ({ x: prev.x + dx, y: prev.y + dy }));
+        setLastMousePos({ x: e.clientX, y: e.clientY });
+      };
+
+      const handleMouseUp = () => setIsDragging(false);
+
+      const handleKeyDown = (e) => {
+        if (!fileItem) return;
+        const step = e.shiftKey ? 10 : 1;
+        switch (e.key) {
+          case 'ArrowUp': onPositionChange(p => ({ ...p, y: p.y - step })); e.preventDefault(); break;
+          case 'ArrowDown': onPositionChange(p => ({ ...p, y: p.y + step })); e.preventDefault(); break;
+          case 'ArrowLeft': onPositionChange(p => ({ ...p, x: p.x - step })); e.preventDefault(); break;
+          case 'ArrowRight': onPositionChange(p => ({ ...p, x: p.x + step })); e.preventDefault(); break;
+          default: break;
+        }
+      };
+
+      return (
+        <div className="bg-white p-4 md:p-6 rounded-3xl shadow-sm border border-gray-200 flex flex-col">
+          <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 mb-4">
+            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <Icon path="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" className="w-6 h-6 text-black" />
+              메인 캔버스
+            </h2>
+            
+            <div className="flex flex-wrap items-center gap-4 w-full xl:w-auto">
+              <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-200 w-full sm:w-auto">
+                <span className="text-xs font-bold text-gray-500 whitespace-nowrap">배경 확인:</span>
+                <div className="flex items-center gap-1.5">
+                  {PRESET_COLORS.map(c => (
+                    <button 
+                      key={c} 
+                      onClick={() => setBgColor(c)} 
+                      className={`w-5 h-5 rounded-full border border-gray-300 transition-all ${bgColor === c ? 'ring-2 ring-black ring-offset-1 scale-110' : 'hover:scale-110'}`} 
+                      style={{ backgroundColor: c }} 
+                      title="배경색 변경" 
+                    />
+                  ))}
+                  <div className="w-[1px] h-4 bg-gray-300 mx-1"></div>
+                  <label 
+                    className="relative w-5 h-5 rounded-full border border-gray-300 hover:scale-110 transition-transform overflow-hidden cursor-pointer shadow-sm" 
+                    title="직접 색상 선택"
+                  >
+                    <div className="absolute inset-0 pointer-events-none" style={{ background: 'conic-gradient(#f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)' }}></div>
+                    <input 
+                      type="color" 
+                      value={bgColor} 
+                      onChange={e => setBgColor(e.target.value)} 
+                      className="absolute opacity-0 w-8 h-8 -top-1 -left-1 cursor-pointer" 
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer hover:text-black transition-colors whitespace-nowrap">
+                <input type="checkbox" checked={showGrid} onChange={(e) => setShowGrid(e.target.checked)} className="rounded border-gray-300 text-black focus:ring-black accent-black" />
+                안내선
+              </label>
+              {fileItem && (
+                <span className="text-xs text-gray-500 bg-gray-100 px-3 py-1.5 rounded-full font-medium hidden md:inline-block">
+                  💡 휠 확대/축소 · 캔버스 클릭 후 방향키 이동
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="w-full flex-1 flex justify-center items-center rounded-2xl overflow-hidden border border-gray-200 shadow-inner transition-colors duration-300" style={{ backgroundColor: bgColor, minHeight: '400px' }}>
+            <div className="w-full max-w-3xl relative h-full flex justify-center items-center">
+              {fileItem ? (
+                <svg 
+                  ref={svgRef}
+                  viewBox="0 0 1000 920" 
+                  className={`w-full h-auto block touch-none outline-none cursor-move focus:ring-2 focus:ring-black/20 focus:ring-inset`} 
+                  tabIndex={0}
+                  onMouseDown={handleMouseDown}
+                  onMouseMove={handleMouseMove}
+                  onMouseUp={handleMouseUp}
+                  onMouseLeave={handleMouseUp}
+                  onKeyDown={handleKeyDown}
+                >
+                  <defs>
+                    <clipPath id="stand-clip">
+                      <rect width={OUTPUT_WIDTH} height={OUTPUT_HEIGHT} />
+                    </clipPath>
+                  </defs>
+
+                  <rect width="1000" height="920" fill={bgColor} />
+                  <rect width={OUTPUT_WIDTH} height={OUTPUT_HEIGHT} fill={bgColor} stroke={bgColor === '#ffffff' ? '#e5e7eb' : '#ffffff'} strokeOpacity="0.3" strokeWidth="2" />
+
+                  {imgDetails && (
+                    <g clipPath="url(#stand-clip)">
+                      <image 
+                        href={imgDetails.src} 
+                        x={position.x} 
+                        y={position.y} 
+                        width={imgDetails.width * scale} 
+                        height={imgDetails.height * scale} 
+                      />
+                    </g>
+                  )}
+
+                  {showGrid && imgDetails && (
+                    <g pointerEvents="none">
+                      <rect width={OUTPUT_WIDTH} height={OUTPUT_HEIGHT} fill="none" stroke="rgba(0,0,0,0.2)" strokeWidth="2" />
+                      <line x1={OUTPUT_WIDTH / 3} y1="0" x2={OUTPUT_WIDTH / 3} y2={OUTPUT_HEIGHT} stroke="rgba(0,0,0,0.15)" strokeWidth="1" strokeDasharray="4 4" />
+                      <line x1={(OUTPUT_WIDTH / 3) * 2} y1="0" x2={(OUTPUT_WIDTH / 3) * 2} y2={OUTPUT_HEIGHT} stroke="rgba(0,0,0,0.15)" strokeWidth="1" strokeDasharray="4 4" />
+                      <line x1="0" y1={OUTPUT_HEIGHT / 3} x2={OUTPUT_WIDTH} y2={OUTPUT_HEIGHT / 3} stroke="rgba(0,0,0,0.15)" strokeWidth="1" strokeDasharray="4 4" />
+                      <line x1="0" y1={(OUTPUT_HEIGHT / 3) * 2} x2={OUTPUT_WIDTH} y2={(OUTPUT_HEIGHT / 3) * 2} stroke="rgba(0,0,0,0.15)" strokeWidth="1" strokeDasharray="4 4" />
+                      <line x1={OUTPUT_WIDTH / 2} y1="0" x2={OUTPUT_WIDTH / 2} y2={OUTPUT_HEIGHT} stroke="rgba(255,0,0,0.3)" strokeWidth="1" />
+                      <line x1="0" y1={OUTPUT_HEIGHT / 2} x2={OUTPUT_WIDTH} y2={OUTPUT_HEIGHT / 2} stroke="rgba(255,0,0,0.3)" strokeWidth="1" />
+                    </g>
+                  )}
+
+                  <g transform={`translate(0, ${OUTPUT_HEIGHT})`} pointerEvents="none">
+                    <rect width="1000" height="200" fill="#151515" />
+                    <text x="40" y="60" fill="white" fontSize="24" fontWeight="bold">이름은 이정도 길이</text>
+                    <text x="40" y="115" fill="#f3f4f6" fontSize="20">"대사의 예시입니다."</text>
+                    <polygon points="910,48 918,54 910,60" fill="white" />
+                    <path d="M940 45 L955 60 M955 45 L940 60" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+                  </g>
+                </svg>
+              ) : (
+                <div className="flex flex-col items-center justify-center text-center p-8 bg-white/50 rounded-2xl border-2 border-dashed border-gray-300 m-8">
+                  <div className="bg-gray-100 p-4 rounded-full mb-4">
+                    <Icon path="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" className="w-10 h-10 text-gray-400" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-700 mb-2">업로드된 이미지가 없습니다</h3>
+                  <p className="text-sm text-gray-500 max-w-xs">
+                    왼쪽 툴바의 <strong>[이미지 파일 추가하기]</strong> 버튼을 눌러 작업을 시작해보세요.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // --- 개별 이미지 에디터 컴포넌트 ---
+    const ImageItem = ({ fileItem, scale, position, isSelected, onSelect, onRemove, onDownload, registerGetBlob }) => {
+      const [imgDetails, setImgDetails] = useState(null);
+
+      useEffect(() => {
+        const img = new Image();
+        img.onload = () => setImgDetails({ src: fileItem.preview, width: img.width, height: img.height, imgObj: img });
+        img.src = fileItem.preview;
+      }, [fileItem]);
+
+      const getBlob = useCallback(() => {
+        return new Promise((resolve) => {
+          if (!imgDetails || !imgDetails.imgObj) return resolve(null);
+          const canvas = document.createElement('canvas');
+          canvas.width = OUTPUT_WIDTH;
+          canvas.height = OUTPUT_HEIGHT;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(
+            imgDetails.imgObj,
+            position.x, position.y,
+            imgDetails.width * scale, imgDetails.height * scale
+          );
+          canvas.toBlob((blob) => resolve({ blob, name: fileItem.file.name }), 'image/png');
+        });
+      }, [imgDetails, position, scale, fileItem.file.name]);
+
+      useEffect(() => {
+        registerGetBlob(fileItem.id, getBlob);
+      }, [getBlob, fileItem.id, registerGetBlob]);
+
+      return (
+        <div 
+          onClick={onSelect}
+          className={`flex flex-col border-2 rounded-2xl overflow-hidden bg-white transition-all group cursor-pointer ${
+            isSelected 
+              ? 'border-black shadow-md scale-[1.02] ring-2 ring-black/10' 
+              : 'border-transparent shadow-sm hover:shadow-md hover:border-gray-300'
+          }`}
+        >
+          <div className="flex justify-center items-center p-2 relative bg-[#e5e7eb]">
+            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 z-10 backdrop-blur-[1px]">
+              <button 
+                onClick={(e) => { e.stopPropagation(); getBlob().then(res => onDownload(res)); }} 
+                className="p-2 bg-white text-gray-900 rounded-full hover:scale-110 shadow-sm transition-transform" 
+                title="개별 저장"
+              >
+                <Icon path="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </button>
+              <button 
+                onClick={(e) => { e.stopPropagation(); onRemove(fileItem.id); }} 
+                className="p-2 bg-white text-red-600 rounded-full hover:scale-110 shadow-sm transition-transform" 
+                title="삭제"
+              >
+                <Icon path="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </button>
+            </div>
+
+            <div className={`w-full relative overflow-hidden rounded-lg border shadow-inner ${isSelected ? 'border-gray-400' : 'border-gray-300'}`} style={{ backgroundColor: '#e5e7eb' }}>
+              <svg viewBox={`0 0 ${OUTPUT_WIDTH} ${OUTPUT_HEIGHT}`} className="w-full h-auto block">
+                {imgDetails && (
+                  <image 
+                    href={imgDetails.src} 
+                    x={position.x} 
+                    y={position.y} 
+                    width={imgDetails.width * scale} 
+                    height={imgDetails.height * scale} 
+                  />
+                )}
+              </svg>
+            </div>
+          </div>
+          <div className={`p-2.5 bg-white border-t ${isSelected ? 'border-gray-200' : 'border-gray-100'} z-20 relative`}>
+            <span className={`block text-xs text-center font-bold truncate ${isSelected ? 'text-black' : 'text-gray-600'}`} title={fileItem.file.name}>
+              {fileItem.file.name}
+            </span>
+          </div>
+        </div>
+      );
+    };
+
+    // --- 메인 App 컴포넌트 ---
+    function App() {
+      const isZipLoaded = useJSZip();
+      const [files, setFiles] = useState([]);
+      const [selectedFileId, setSelectedFileId] = useState(null); 
+      const [isProcessingBg, setIsProcessingBg] = useState(false);
+      const [isDownloading, setIsDownloading] = useState(false);
+      
+      const [globalScale, setGlobalScale] = useState(1);
+      const [globalPosition, setGlobalPosition] = useState({ x: 0, y: 0 });
+      const [isInitialized, setIsInitialized] = useState(false);
+      const fileInputRef = useRef(null);
+
+      const getBlobFns = useRef({});
+
+      const registerGetBlob = useCallback((id, fn) => {
+        getBlobFns.current[id] = fn;
+      }, []);
+
+      useEffect(() => {
+        if (files.length > 0) {
+          if (!selectedFileId || !files.some(f => f.id === selectedFileId)) {
+            setSelectedFileId(files[0].id);
+          }
+        } else {
+          setSelectedFileId(null);
+        }
+      }, [files, selectedFileId]);
+
+      const selectedFileItem = files.find(f => f.id === selectedFileId) || (files.length > 0 ? files[0] : null);
+
+      const handleGlobalScaleUpdate = useCallback((newScale) => {
+        setGlobalScale(prevScale => {
+          const ratio = newScale / prevScale;
+          setGlobalPosition(prevPos => ({
+            x: (OUTPUT_WIDTH / 2) - ((OUTPUT_WIDTH / 2) - prevPos.x) * ratio,
+            y: (OUTPUT_HEIGHT / 2) - ((OUTPUT_HEIGHT / 2) - prevPos.y) * ratio
+          }));
+          return newScale;
+        });
+      }, []);
+
+      const handleRemoveWhiteBackground = async () => {
+        if (files.length === 0) return;
+        setIsProcessingBg(true);
+
+        const processImage = (fileItem) => {
+          return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              canvas.width = img.width;
+              canvas.height = img.height;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0);
+              
+              const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+              const data = imageData.data;
+              const w = canvas.width;
+              const h = canvas.height;
+              
+              const isWhite = (i) => {
+                const r = data[i], g = data[i+1], b = data[i+2], a = data[i+3];
+                if (a === 0) return false;
+                const threshold = 240; 
+                return r > threshold && g > threshold && b > threshold &&
+                       Math.abs(r - g) < 15 && Math.abs(r - b) < 15 && Math.abs(g - b) < 15;
+              };
+
+              const visited = new Uint8Array(w * h);
+              const queueX = new Int32Array(w * h);
+              const queueY = new Int32Array(w * h);
+              let head = 0;
+              let tail = 0;
+
+              const tryAdd = (x, y) => {
+                if (x < 0 || x >= w || y < 0 || y >= h) return;
+                const idx = y * w + x;
+                if (visited[idx]) return;
+
+                const pxIdx = idx * 4;
+                if (isWhite(pxIdx)) {
+                  visited[idx] = 1;
+                  data[pxIdx + 3] = 0; 
+                  queueX[tail] = x;
+                  queueY[tail] = y;
+                  tail++;
+                }
+              };
+
+              for (let x = 0; x < w; x++) { tryAdd(x, 0); tryAdd(x, h - 1); }
+              for (let y = 0; y < h; y++) { tryAdd(0, y); tryAdd(w - 1, y); }
+
+              while (head < tail) {
+                const x = queueX[head];
+                const y = queueY[head];
+                head++;
+                
+                tryAdd(x + 1, y);
+                tryAdd(x - 1, y);
+                tryAdd(x, y + 1);
+                tryAdd(x, y - 1);
+              }
+              
+              ctx.putImageData(imageData, 0, 0);
+              
+              canvas.toBlob((blob) => {
+                const newUrl = URL.createObjectURL(blob);
+                resolve({
+                  ...fileItem,
+                  file: new File([blob], fileItem.file.name.replace(/\.[^/.]+$/, "") + ".png", { type: 'image/png' }),
+                  preview: newUrl
+                });
+              }, 'image/png');
+            };
+            img.src = fileItem.preview;
+          });
+        };
+
+        try {
+          const newFiles = await Promise.all(files.map(processImage));
+          setFiles(newFiles);
+        } catch (e) {
+          console.error("배경 제거 중 오류 발생:", e);
+        } finally {
+          setIsProcessingBg(false);
+        }
+      };
+
+      const handleGlobalAutoTrim = useCallback(() => {
+        if (!selectedFileItem) return;
+        const targetFile = selectedFileItem;
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+          const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const l = pixels.data.length;
+          let bound = { top: null, left: null, right: null, bottom: null };
+
+          for (let i = 0; i < l; i += 4) {
+            if (pixels.data[i + 3] !== 0) {
+              const x = (i / 4) % canvas.width;
+              const y = ~~((i / 4) / canvas.width);
+              if (bound.top === null) bound.top = y;
+              if (bound.left === null || x < bound.left) bound.left = x;
+              if (bound.right === null || x > bound.right) bound.right = x;
+              if (bound.bottom === null || y > bound.bottom) bound.bottom = y;
+            }
+          }
+
+          if (bound.top !== null) {
+            const trimWidth = bound.right - bound.left + 1;
+            const newScale = OUTPUT_WIDTH / trimWidth;
+            setGlobalScale(newScale);
+            setGlobalPosition({
+              x: -bound.left * newScale,
+              y: OUTPUT_HEIGHT - bound.bottom * newScale
+            });
+          }
+        };
+        img.src = targetFile.preview;
+      }, [selectedFileItem]);
+
+      const handleGlobalFitBottom = useCallback(() => {
+        if (!selectedFileItem) return;
+        const img = new Image();
+        img.onload = () => {
+          const newScale = OUTPUT_WIDTH / img.width;
+          setGlobalScale(newScale);
+          setGlobalPosition({
+            x: (OUTPUT_WIDTH - img.width * newScale) / 2,
+            y: OUTPUT_HEIGHT - img.height * newScale
+          });
+        };
+        img.src = selectedFileItem.preview;
+      }, [selectedFileItem]);
+
+      useEffect(() => {
+        if (files.length > 0 && !isInitialized) {
+          setIsInitialized(true);
+          handleGlobalFitBottom();
+        }
+      }, [files, isInitialized, handleGlobalFitBottom]);
+
+      const handleFileChange = (e) => {
+        const selectedFiles = Array.from(e.target.files);
+        if (selectedFiles.length === 0) return;
+        
+        const newFiles = selectedFiles.map(file => ({
+          id: Math.random().toString(36).substring(7),
+          file,
+          preview: URL.createObjectURL(file)
+        }));
+        
+        setFiles(prev => {
+          const updatedFiles = [...prev, ...newFiles];
+          if (!selectedFileId && updatedFiles.length > 0) {
+            setSelectedFileId(updatedFiles[0].id);
+          }
+          return updatedFiles;
+        });
+        
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      };
+
+      const removeFile = (id) => {
+        setFiles(prev => prev.filter(f => f.id !== id));
+        delete getBlobFns.current[id];
+        if (files.length <= 1) setIsInitialized(false);
+      };
+
+      const downloadSingle = (res) => {
+        if (!res || !res.blob) return;
+        const url = URL.createObjectURL(res.blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `cropped_${res.name}`;
+        a.click();
+        URL.revokeObjectURL(url);
+      };
+
+      const downloadAll = async () => {
+        if (!isZipLoaded || files.length === 0) return;
+        setIsDownloading(true); 
+        const zip = new window.JSZip();
+        
+        const promises = files.map(fileItem => {
+          const fn = getBlobFns.current[fileItem.id];
+          return fn ? fn() : null;
+        });
+
+        try {
+          const results = await Promise.all(promises);
+          let hasValidImage = false;
+          results.forEach((res) => {
+            if (res && res.blob) {
+              hasValidImage = true;
+              zip.file(`cropped_${res.name}`, res.blob);
+            }
+          });
+
+          if (hasValidImage) {
+            const content = await zip.generateAsync({ type: 'blob' });
+            const url = URL.createObjectURL(content);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'Crop_Standing.zip';
+            a.click();
+            URL.revokeObjectURL(url);
+          }
+        } catch (e) {
+          console.error("ZIP 생성 오류:", e);
+        } finally {
+          setIsDownloading(false); 
+        }
+      };
+
+      return (
+        <div className="flex flex-col md:flex-row h-screen w-full bg-[#eef0f2] font-sans overflow-hidden text-gray-900">
+          
+          <div className="md:py-6 md:pl-6 w-full md:w-auto h-auto md:h-full flex-shrink-0 relative z-10 overflow-visible">
+            <aside className="w-full md:w-[340px] bg-white/95 backdrop-blur-md md:rounded-3xl flex flex-col h-[50vh] md:h-full shadow-[0_8px_30px_rgb(0,0,0,0.06)] border-b md:border border-gray-200/60 overflow-hidden">
+              
+              <div className="p-5 md:p-6 border-b border-gray-100 bg-white flex-shrink-0">
+                <h1 className="text-xl md:text-2xl font-black text-black tracking-tight flex items-center gap-2">
+                  <span className="text-gray-800">✂️</span> CCFolia 스탠딩 크롭기
+                </h1>
+                <p className="text-xs md:text-sm text-gray-500 mt-1 md:mt-2 font-medium">
+                  스탠딩 포트레이트 일괄 크롭기 드래그/휠/방향키로 위치 및 크기를 조절할 수 있습니다.
+                </p>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-5 md:p-6 flex flex-col gap-6 md:gap-8 custom-scrollbar">
+                
+                <div className="space-y-3">
+                  <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">1. 파일 업로드 및 처리</h3>
+                  <button 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full flex items-center justify-center gap-2 bg-gray-50 text-gray-800 border-2 border-dashed border-gray-300 hover:border-black hover:bg-gray-100 py-3 md:py-4 rounded-2xl transition-all font-bold"
+                  >
+                    <Icon path="M12 4v16m8-8H4" className="w-5 h-5" />
+                    이미지 파일 추가하기
+                  </button>
+                  <input 
+                    ref={fileInputRef}
+                    type="file" multiple accept="image/png, image/jpeg, image/webp" 
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                  
+                  <button 
+                    onClick={handleRemoveWhiteBackground}
+                    disabled={files.length === 0 || isProcessingBg}
+                    className={`w-full mt-2 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all border ${
+                      files.length > 0 && !isProcessingBg
+                        ? 'bg-white text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-400' 
+                        : 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'
+                    }`}
+                  >
+                    {isProcessingBg ? (
+                      <>⏳ 배경 추적 및 제거 중...</>
+                    ) : (
+                      <>
+                        <Icon path="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" className="w-4 h-4" />
+                        업로드 이미지 흰색 배경 지우기
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <div className={`space-y-4 ${files.length === 0 ? 'opacity-30 pointer-events-none' : ''}`}>
+                  <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">2. 위치 및 크기 조절</h3>
+                  
+                  <button 
+                    onClick={handleGlobalAutoTrim}
+                    className="w-full flex items-center justify-center gap-2 bg-black text-white hover:bg-gray-800 py-3.5 rounded-2xl transition-all font-bold shadow-md hover:shadow-lg"
+                  >
+                    <Icon path="M13 10V3L4 14h7v7l9-11h-7z" className="w-5 h-5 text-gray-200" />
+                    선택 이미지 투명 여백 제거
+                  </button>
+                  
+                  <button 
+                    onClick={handleGlobalFitBottom}
+                    className="w-full flex items-center justify-center gap-2 bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 py-3 rounded-2xl transition-all font-semibold shadow-sm"
+                  >
+                    <Icon path="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    위치 초기화
+                  </button>
+
+                  <div className="pt-5 space-y-3">
+                    <div className="flex justify-between items-center text-sm font-bold text-gray-700">
+                      <span>크기 조절</span>
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => handleGlobalScaleUpdate(1)}
+                          className="text-[10px] bg-gray-200 hover:bg-gray-300 text-gray-600 px-2 py-0.5 rounded transition-colors"
+                          title="100% 원본 크기로 돌아가기"
+                        >
+                          100%
+                        </button>
+                        <span className="text-black bg-gray-100 px-2 py-0.5 rounded-md min-w-[3rem] text-center">{(globalScale * 100).toFixed(0)}%</span>
+                      </div>
+                    </div>
+                    <input 
+                      type="range" min="0.1" max="3" step="0.01" 
+                      value={globalScale} onChange={(e) => handleGlobalScaleUpdate(parseFloat(e.target.value))}
+                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black hover:accent-gray-800 transition-all"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 md:p-5 border-t border-gray-100 bg-gray-50/50 flex-shrink-0">
+                <button 
+                  onClick={downloadAll}
+                  disabled={!isZipLoaded || files.length === 0 || isDownloading}
+                  className={`w-full py-3.5 md:py-4 rounded-2xl font-bold text-white flex items-center justify-center gap-2 transition-all ${
+                    files.length > 0 && isZipLoaded && !isDownloading
+                      ? 'bg-black hover:bg-gray-800 shadow-[0_4px_14px_0_rgba(0,0,0,0.39)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.23)] hover:-translate-y-0.5' 
+                      : 'bg-gray-300 cursor-not-allowed text-gray-500'
+                  }`}
+                >
+                  {isDownloading ? (
+                    <>⏳ 압축 중... 잠시만 기다려주세요</>
+                  ) : (
+                    <>
+                      <Icon path="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      {files.length > 0 ? `모든 이미지 ZIP 저장 (${files.length}장)` : '이미지를 추가해주세요'}
+                    </>
+                  )}
+                </button>
+              </div>
+            </aside>
+          </div>
+
+          <main className="flex-1 h-full overflow-y-auto p-4 lg:p-8 flex flex-col gap-6 lg:gap-8 relative">
+            
+            <GamePreview 
+              fileItem={selectedFileItem} 
+              scale={globalScale} 
+              position={globalPosition} 
+              onPositionChange={setGlobalPosition}
+              onScaleChange={handleGlobalScaleUpdate} 
+            />
+
+            {files.length > 0 && (
+              <div className="bg-white p-4 md:p-6 rounded-3xl shadow-sm border border-gray-200 mb-10">
+                <h2 className="text-lg font-bold text-gray-900 mb-5 flex items-center gap-2">
+                  출력 대기열 
+                  <span className="text-white bg-black px-2.5 py-0.5 rounded-full text-sm">{files.length}</span>
+                </h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-5">
+                  {files.map(fileItem => (
+                    <ImageItem 
+                      key={fileItem.id} 
+                      fileItem={fileItem}
+                      scale={globalScale}
+                      position={globalPosition}
+                      isSelected={selectedFileId === fileItem.id}
+                      onSelect={() => setSelectedFileId(fileItem.id)}
+                      onRemove={removeFile}
+                      onDownload={downloadSingle}
+                      registerGetBlob={registerGetBlob}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </main>
+        </div>
+      );
+    }
+
+    // React 컴포넌트를 id="root" 인 곳에 렌더링
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
 </html>
