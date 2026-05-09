@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Roll20 롤꾸 스튜디오 (Live Editor)</title>
+<style>
+  :root {
+    --primary: #6366f1;
+    --primary-hover: #4f46e5;
+    --bg-color: #f8fafc;
+    --card-bg: #ffffff;
+    --border: #e2e8f0;
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --input-bg: #f8fafc;
+  }
+  
+  * { box-sizing: border-box; }
+  
+  body { 
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
+    background-color: var(--bg-color); 
+    padding: 2vh 2vw; 
+    color: var(--text-main);
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  .header-title {
+    text-align: center;
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--primary);
+    margin-bottom: 5px;
+    letter-spacing: -0.5px;
+  }
+  .header-subtitle {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 14px;
+    margin-bottom: 30px;
+  }
+
+  .layout { 
+    max-width: 1200px; 
+    margin: 0 auto; 
+    display: grid;
+    grid-template-columns: 420px 1fr;
+    gap: 25px;
+    align-items: start;
+  }
+
+  @media (max-width: 960px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: var(--card-bg); 
+    padding: 24px; 
+    border-radius: 16px; 
+    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05), 0 8px 10px -6px rgba(0,0,0,0.01);
+    border: 1px solid #f1f5f9;
+  }
+
+  h2 { 
+    font-size: 16px; 
+    margin: 0 0 16px 0; 
+    padding-bottom: 12px;
+    border-bottom: 2px solid #f1f5f9; 
+    color: #0f172a; 
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* 폼 요소 스타일 */
+  .form-group { margin-bottom: 16px; }
+  label { 
+    display: block; 
+    margin-bottom: 6px; 
+    font-weight: 600; 
+    font-size: 13px; 
+    color: #475569; 
+  }
+  
+  input[type="text"] { 
+    width: 100%; 
+    padding: 10px 12px; 
+    border: 1px solid var(--border); 
+    border-radius: 8px; 
+    font-size: 14px;
+    background-color: var(--input-bg);
+    color: var(--text-main);
+    transition: all 0.2s;
+  }
+  
+  input[type="text"]:focus { 
+    border-color: var(--primary); 
+    background-color: #fff;
+    outline: none; 
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  }
+
+  /* 토글 스위치 (GM 모드) */
+  .toggle-wrapper { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; background: var(--input-bg); padding: 12px; border-radius: 8px; border: 1px solid var(--border); }
+  .toggle-label { font-weight: 700; font-size: 13px; color: var(--text-main); margin: 0; }
+  .toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .3s; border-radius: 24px; }
+  .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+  input:checked + .slider { background-color: var(--primary); }
+  input:checked + .slider:before { transform: translateX(20px); }
+
+  /* 템플릿 스크롤 리스트 (새로운 UI) */
+  .template-list-wrapper {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--input-bg);
+    overflow: hidden;
+  }
+  .template-list {
+    max-height: 250px;
+    overflow-y: auto;
+    padding: 8px;
+  }
+  .template-list::-webkit-scrollbar { width: 6px; }
+  .template-list::-webkit-scrollbar-track { background: transparent; }
+  .template-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+  
+  .template-group {
+    margin-bottom: 12px;
+  }
+  .template-group:last-child { margin-bottom: 0; }
+  .template-group-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    padding: 4px 8px 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .template-item {
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    color: var(--text-main);
+    transition: all 0.15s;
+    margin-bottom: 2px;
+    display: flex;
+    align-items: center;
+  }
+  .template-item:hover {
+    background: #e2e8f0;
+  }
+  .template-item.active {
+    background: #e0e7ff;
+    color: var(--primary-hover);
+    font-weight: 700;
+  }
+  .template-item.active::before {
+    content: '✔';
+    margin-right: 8px;
+    font-size: 11px;
+  }
+
+  /* 색상 픽커 그리드 */
+  .color-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .color-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: var(--input-bg);
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    transition: border-color 0.2s;
+  }
+  .color-item:hover { border-color: #cbd5e1; }
+  .color-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  input[type="color"] {
+    -webkit-appearance: none;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    cursor: pointer;
+    padding: 0;
+    background: none;
+    flex-shrink: 0;
+  }
+  input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+  input[type="color"]::-webkit-color-swatch { border: 1px solid rgba(0,0,0,0.15); border-radius: 6px; }
+  
+  .hex-input {
+    flex-grow: 1;
+    font-family: 'D2Coding', 'Consolas', monospace;
+    font-size: 12px !important;
+    padding: 6px 8px !important;
+    text-transform: uppercase;
+  }
+
+  /* Roll20 실제 환경 모형 (미리보기) */
+  .preview-container { margin-bottom: 24px; }
+  .roll20-mockup {
+    background-color: #ffffff;
+    background-image: url('data:image/svg+xml;utf8,<svg width="20" height="20" xmlns="http://www.w3.org/2000/svg"><path d="M0 0h20v20H0z" fill="%23fff"/><circle cx="10" cy="10" r="1" fill="%23f1f1f1"/></svg>');
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    color: #333;
+    padding: 16px;
+    min-height: 220px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .r20-message {
+    display: flex;
+    position: relative;
+    width: 100%;
+    margin: 5px 0;
+  }
+  .r20-avatar {
+    width: 32px;
+    height: 32px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    margin-right: 12px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8;
+  }
+  .r20-content {
+    flex-grow: 1;
+    min-width: 0;
+    position: relative;
+  }
+  .r20-header {
+    font-weight: bold;
+    color: #1d2129;
+    font-size: 13px;
+    margin-bottom: 4px;
+  }
+  .r20-time {
+    font-weight: normal;
+    color: #999;
+    font-size: 11px;
+    margin-left: 5px;
+  }
+
+  /* 라이브 에디터 텍스트 에어리어 */
+  .editor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .editor-badge {
+    font-size: 11px;
+    background: #e0e7ff;
+    color: #4338ca;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .editor-badge::before {
+    content: '';
+    display: block;
+    width: 6px;
+    height: 6px;
+    background-color: #4f46e5;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 4px rgba(79, 70, 229, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); }
+  }
+  
+  textarea { 
+    width: 100%; 
+    height: 160px; 
+    padding: 16px; 
+    font-family: 'D2Coding', 'Consolas', monospace; 
+    font-size: 13px;
+    border: 1px solid var(--border); 
+    border-radius: 8px; 
+    resize: vertical; 
+    background-color: #1e293b;
+    color: #f8fafc;
+    line-height: 1.6;
+    transition: box-shadow 0.2s;
+  }
+  textarea:focus { outline: none; box-shadow: 0 0 0 3px rgba(99,102,241,0.2); border-color: var(--primary); }
+  textarea::-webkit-scrollbar { width: 8px; }
+  textarea::-webkit-scrollbar-track { background: #1e293b; border-radius: 8px; }
+  textarea::-webkit-scrollbar-thumb { background: #475569; border-radius: 8px; }
+
+  /* 버튼들 */
+  .btn-group { display: flex; gap: 12px; margin-top: 15px; }
+  button {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 14px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+  }
+  button:active { transform: translateY(1px); }
+  .btn-primary { background: var(--primary); color: white; box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.2); }
+  .btn-primary:hover { background: var(--primary-hover); box-shadow: 0 6px 8px -1px rgba(99, 102, 241, 0.3); }
+  .btn-secondary { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+  .btn-secondary:hover { background: #e2e8f0; color: #1e293b; }
+</style>
+</head>
+<body>
+
+<div class="header-title">🎨 Roll20 롤꾸 스튜디오</div>
+<div class="header-subtitle">코드 수정 시 미리보기에 실시간 반영됩니다 (Live CSS Preview)</div>
+
+<div class="layout">
+  <!-- 왼쪽 컨트롤 패널 -->
+  <div class="panel">
+    <h2>🛠️ 서식 & 데이터 설정</h2>
+    
+    <div class="form-group">
+      <label>템플릿 선택</label>
+      <div class="template-list-wrapper">
+        <div class="template-list" id="templateList">
+          <!-- SNS / 방송 (NEW) -->
+          <div class="template-group">
+            <div class="template-group-title">📱 SNS / 인터넷 방송 (NEW)</div>
+            <div class="template-item active" data-value="tiktok_style">🎵 틱톡(TikTok) 글리치</div>
+            <div class="template-item" data-value="yt_live">▶ 유튜브 라이브 / 자막</div>
+            <div class="template-item" data-value="superchat">💸 방송 슈퍼챗 (후원)</div>
+            <div class="template-item" data-value="insta_style">📸 인스타 / SNS 멘션</div>
+          </div>
+          <!-- 현판 / 시스템 -->
+          <div class="template-group">
+            <div class="template-group-title">💫 현판 / 시스템 알림</div>
+            <div class="template-item" data-value="status_window">📜 상태창 오픈</div>
+            <div class="template-item" data-value="system_msg">🔔 띠링! (시스템 메시지)</div>
+            <div class="template-item" data-value="skill_active">✨ 스킬 발동</div>
+            <div class="template-item" data-value="quest_receive">📜 돌발 퀘스트 발생</div>
+            <div class="template-item" data-value="warning_msg">⚠ 페이즈/위험 경고</div>
+            <div class="template-item" data-value="secret_get">🔒 비밀/아이템 획득</div>
+          </div>
+          <!-- 강조 / 박스 -->
+          <div class="template-group">
+            <div class="template-group-title">강조 / 박스</div>
+            <div class="template-item" data-value="highlight_bg">기본 배경 강조</div>
+            <div class="template-item" data-value="dashed_box">점선 네모 강조</div>
+            <div class="template-item" data-value="cartoon_box">카툰 박스 (코믹스풍)</div>
+            <div class="template-item" data-value="gradient_box">그라데이션 박스</div>
+            <div class="template-item" data-value="memo_line">메모 (좌측 색상 띠)</div>
+            <div class="template-item" data-value="handout_box">핸드아웃 (🔎 돋보기형)</div>
+            <div class="template-item" data-value="tv_static">TV 노이즈 배경 (지직거림)</div>
+          </div>
+          <!-- 메신저 / 말풍선 -->
+          <div class="template-group">
+            <div class="template-group-title">메신저 / 말풍선</div>
+            <div class="template-item" data-value="think_bubble">생각 말풍선 (●●)</div>
+            <div class="template-item" data-value="kakao_send">카카오톡 (노란 메시지)</div>
+            <div class="template-item" data-value="iphone_send">아이폰 (파란색 iMessage)</div>
+            <div class="template-item" data-value="line_send">라인 (초록색 메시지)</div>
+          </div>
+          <!-- 특수 효과 / 기타 -->
+          <div class="template-group">
+            <div class="template-group-title">특수 효과 / 기타</div>
+            <div class="template-item" data-value="ruby_neon">루비 문자 + 네온사인</div>
+            <div class="template-item" data-value="madness">광기 현재화 (크툴루)</div>
+            <div class="template-item" data-value="blur_text_heavy">블러 효과 (흐리게)</div>
+            <div class="template-item" data-value="bgm_play2">BGM 재생 알림 (♪ 둥근 띠)</div>
+            <div class="template-item" data-value="roll20_table">Roll20 기본 표 서식</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GM 모드 토글 (NEW) -->
+    <div class="toggle-wrapper">
+      <div style="display:flex; flex-direction:column; gap:4px;">
+        <span class="toggle-label">👑 GM 모드 (/desc 적용)</span>
+        <span style="font-size:11px; color:var(--text-muted); line-height:1.3;">끄면 PL(플레이어)도 일반 채팅으로 쓸 수 있습니다.</span>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" id="useDescToggle" checked onchange="generateMacro()">
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <div class="form-group">
+      <label>본문 내용</label>
+      <input type="text" id="inputText" value="여러분 안녕하세요~ 오늘 챌린지 찍어볼게요! 🥰" oninput="generateMacro()">
+    </div>
+
+    <div class="form-group">
+      <label>항목 1 (유저명 / 등급 / 대상 등)</label>
+      <input type="text" id="inputExtra1" value="@TikToker_User" oninput="generateMacro()">
+    </div>
+
+    <div class="form-group">
+      <label>항목 2 (금액 / 시간 / 분류 등)</label>
+      <input type="text" id="inputExtra2" value="50,000" oninput="generateMacro()">
+    </div>
+
+    <h2 style="margin-top: 30px;">🎨 색상 커스텀</h2>
+    <div class="color-grid">
+      <div class="color-item">
+        <label for="colorText">글자색</label>
+        <div class="color-controls">
+          <input type="color" id="colorText" oninput="syncColor('Text', 'picker')">
+          <input type="text" id="hexText" class="hex-input" oninput="syncColor('Text', 'hex')">
+        </div>
+      </div>
+      <div class="color-item">
+        <label for="colorShadow">그림자/테두리/어두운BG</label>
+        <div class="color-controls">
+          <input type="color" id="colorShadow" oninput="syncColor('Shadow', 'picker')">
+          <input type="text" id="hexShadow" class="hex-input" oninput="syncColor('Shadow', 'hex')">
+        </div>
+      </div>
+      <div class="color-item">
+        <label for="colorBg1">포인트 1 (테마색)</label>
+        <div class="color-controls">
+          <input type="color" id="colorBg1" oninput="syncColor('Bg1', 'picker')">
+          <input type="text" id="hexBg1" class="hex-input" oninput="syncColor('Bg1', 'hex')">
+        </div>
+      </div>
+      <div class="color-item">
+        <label for="colorBg2">포인트 2 (보조색)</label>
+        <div class="color-controls">
+          <input type="color" id="colorBg2" oninput="syncColor('Bg2', 'picker')">
+          <input type="text" id="hexBg2" class="hex-input" oninput="syncColor('Bg2', 'hex')">
+        </div>
+      </div>
+    </div>
+    
+    <div class="btn-group" style="margin-top:20px;">
+      <button class="btn-secondary" onclick="resetColors()">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+        기본 색상 복구
+      </button>
+    </div>
+  </div>
+
+  <!-- 오른쪽 미리보기 및 에디터 패널 -->
+  <div class="panel" style="display:flex; flex-direction:column;">
+    
+    <div class="preview-container">
+      <h2>👁️ 완벽 미리보기 (Roll20 환경)</h2>
+      <div class="roll20-mockup">
+        <div class="r20-message">
+          <div class="r20-avatar">
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+          </div>
+          <div class="r20-content">
+            <div class="r20-header">GM <span class="r20-time">(오후 10:00)</span></div>
+            <!-- 실제 렌더링될 내부 -->
+            <div id="previewBox" style="position: relative; width: 100%;">
+              <!-- JS가 여기에 렌더링 -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex-grow: 1; display:flex; flex-direction:column;">
+      <div class="editor-header">
+        <h2 style="margin:0; padding:0; border:none;">💻 라이브 코드 에디터</h2>
+        <span class="editor-badge">실시간 동기화 중</span>
+      </div>
+      <textarea id="outputCode" oninput="updatePreviewFromCode()" spellcheck="false"></textarea>
+      
+      <div class="btn-group">
+        <button id="copyBtn" class="btn-primary" onclick="copyCode()">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+          완성된 매크로 복사하기
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  let currentTemplate = 'tiktok_style'; // 기본 선택 템플릿
+
+  // ==========================================
+  // 1. 템플릿 데이터베이스
+  // ==========================================
+  const templates = {
+    // ---- [NEW] SNS / 방송 연출 ----
+    tiktok_style: {
+      macro: `/desc [🎵 __EXTRA1__](#" style="text-decoration:none; color:__COLOR_TEXT__; font-weight:900; font-style:italic; font-size:16px; text-shadow: 2px 0 0 __COLOR_BG1__, -2px 0 0 __COLOR_BG2__; letter-spacing:1px; display:block; margin-bottom:5px;")\n/desc [__TEXT__](#" style="text-decoration:none; display:block; color:__COLOR_TEXT__; background:__COLOR_SHADOW__; padding:12px; border-radius:8px; border-left: 4px solid __COLOR_BG1__; border-right: 4px solid __COLOR_BG2__; font-size:14px; line-height:1.5;")`,
+      preset: { Text: "#ffffff", Bg1: "#fe0979", Bg2: "#00f2fe", Shadow: "#111111" }
+    },
+    yt_live: {
+      macro: `/desc [▶ LIVE](#" style="text-decoration:none; color:#ffffff; background:__COLOR_BG1__; padding:3px 6px; border-radius:4px; font-weight:bold; font-size:11px; margin-right:4px;") [__EXTRA1__](#" style="text-decoration:none; color:__COLOR_SHADOW__; font-weight:bold; font-size:13px;")\n/desc [__TEXT__](#" style="text-decoration:none; display:block; color:__COLOR_TEXT__; background:__COLOR_BG2__; padding:10px; border:1px solid #e5e5e5; border-left:4px solid __COLOR_BG1__; border-radius:4px; margin-top:6px; box-shadow:0 2px 4px rgba(0,0,0,0.05&#41;; font-size:14px;")`,
+      preset: { Text: "#0f0f0f", Bg1: "#ff0000", Bg2: "#ffffff", Shadow: "#606060" }
+    },
+    superchat: {
+      macro: `/desc [💸 ₩__EXTRA2__](#" style="text-decoration:none; display:block; color:#ffffff; background:__COLOR_BG1__; padding:8px 12px; font-weight:bold; border-radius:6px 6px 0 0; font-size:15px; text-shadow: 1px 1px 1px rgba(0,0,0,0.2&#41;;")\n/desc [__EXTRA1__](#" style="text-decoration:none; font-weight:bold; color:__COLOR_SHADOW__; display:block; background:__COLOR_BG2__; padding:8px 12px 2px 12px; font-size:13px;")\n/desc [__TEXT__](#" style="text-decoration:none; display:block; color:__COLOR_TEXT__; background:__COLOR_BG2__; padding:4px 12px 10px 12px; border-radius:0 0 6px 6px; font-size:14px;")`,
+      preset: { Text: "#1a1a1a", Bg1: "#F57C00", Bg2: "#FFE0B2", Shadow: "#5D4037" }
+    },
+    insta_style: {
+      macro: `/desc [📸 __EXTRA1__](#" style="text-decoration:none; font-weight:bold; color:__COLOR_SHADOW__; display:block; margin-bottom:6px; font-size:13px;") [__TEXT__](#" style="text-decoration:none; display:inline-block; color:__COLOR_TEXT__; background:__COLOR_BG2__; padding:10px 16px; border-radius:20px; font-size:14px; box-shadow: 0 0 0 2px #fff, 0 0 0 4px __COLOR_BG1__; margin:4px;")`,
+      preset: { Text: "#262626", Bg1: "#E1306C", Bg2: "#f8f8f8", Shadow: "#262626" }
+    },
+
+    // ---- 현판 / 시스템 연출 ----
+    system_msg: {
+      macro: `/desc [■ 시스템 알림 ■](#" style="text-decoration:none; color:__COLOR_BG1__; font-weight: bold; border: 1px solid __COLOR_BG1__; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-right: 6px; box-shadow: 0 0 5px __COLOR_BG1__; text-shadow: 0 0 2px __COLOR_BG1__; background: #111;") [__TEXT__](#" style="text-decoration:none; color:__COLOR_TEXT__; text-shadow: 0 0 2px __COLOR_SHADOW__;")`,
+      preset: { Text: "#ffffff", Bg1: "#00e5ff", Bg2: "#ffffff", Shadow: "#00e5ff" }
+    },
+    status_window: {
+      macro: `/desc [≡ 상태창 (Status) ≡](#" style="text-decoration:none; display:block; text-align:center; color:__COLOR_BG1__; background:__COLOR_SHADOW__; border: 1px solid #333; border-bottom: 2px solid __COLOR_BG1__; padding: 6px; font-weight: bold; font-family: 'Courier New', monospace; letter-spacing: 2px;") [등급: __EXTRA1__ | __EXTRA2__](#" style="text-decoration:none; display:block; background:#1f1f1f; color:#aaa; padding: 4px 8px; font-size:11px; border: 1px solid #333; border-top: none; text-align: right;") [__TEXT__](#" style="text-decoration:none; display:block; background:#111111; color:__COLOR_TEXT__; padding: 12px; border: 1px solid #333; border-top:none; line-height: 1.6; font-size: 13px;")`,
+      preset: { Text: "#e5e7eb", Bg1: "#4ade80", Bg2: "#ffffff", Shadow: "#111827" }
+    },
+    skill_active: {
+      macro: `/desc [▶ 스킬 『__EXTRA1__』 발동!](#" style="text-decoration:none; color: __COLOR_BG1__; font-weight: bold; text-shadow: 0 0 5px __COLOR_BG1__; background: #1a1a1a; border-left: 4px solid __COLOR_BG1__; padding: 6px 12px; display: block; box-shadow: 2px 2px 5px __COLOR_SHADOW__;") [__TEXT__](#" style="text-decoration:none; display:block; color: __COLOR_TEXT__; margin-top: 4px; font-size: 13px; padding-left: 16px;")`,
+      preset: { Text: "#d1d5db", Bg1: "#fbbf24", Bg2: "#ffffff", Shadow: "#000000" }
+    },
+    quest_receive: {
+      macro: `/desc [▶ 돌발 퀘스트 발생!](#" style="text-decoration:none; display:block; text-align:center; color: #fff; background: __COLOR_BG1__; padding: 8px; font-weight: bold; font-size: 14px; border: 1px solid __COLOR_SHADOW__; border-bottom: none; border-radius: 6px 6px 0 0; text-shadow: 1px 1px 2px rgba(0,0,0,0.5&#41;;") [【 __EXTRA1__ 】](#" style="text-decoration:none; display:block; text-align:center; background: #fff; color: __COLOR_SHADOW__; padding: 6px; font-weight: bold; border-left: 1px solid __COLOR_SHADOW__; border-right: 1px solid __COLOR_SHADOW__;") [__TEXT__](#" style="text-decoration:none; display:block; background: #fdfdfd; color: __COLOR_TEXT__; padding: 10px; border: 1px solid __COLOR_SHADOW__; border-top: 1px dashed #ccc; border-radius: 0 0 6px 6px; font-size: 13px; line-height: 1.5;")`,
+      preset: { Text: "#333333", Bg1: "#3b82f6", Bg2: "#ffffff", Shadow: "#94a3b8" }
+    },
+    warning_msg: {
+      macro: `/desc [⚠ 경고 ⚠](#" style="text-decoration:none; display:block; text-align:center; color: #ff3333; font-weight: bold; font-size: 16px; background: #111; padding: 4px; border-top: 2px solid #ff3333; border-bottom: 2px dashed #ff3333; margin-bottom: 4px; letter-spacing: 4px; text-shadow: 0 0 5px #ff3333;") [__EXTRA1__](#" style="text-decoration:none; display:block; text-align:center; color: __COLOR_BG1__; font-weight: bold; font-size: 14px; background: #1a1a1a; padding: 4px;") [__TEXT__](#" style="text-decoration:none; display:block; text-align:center; color: __COLOR_TEXT__; background: #111; padding: 8px; border-bottom: 2px solid #ff3333; font-size: 13px;")`,
+      preset: { Text: "#ffffff", Bg1: "#ff3333", Bg2: "#ffffff", Shadow: "#ff0000" }
+    },
+    secret_get: {
+      macro: `/desc [🔒 비밀 획득](#" style="text-decoration:none; display:inline-block; background: __COLOR_BG1__; color: #fff; padding: 4px 8px; border-radius: 4px 4px 0 0; font-weight:bold; font-size: 12px; box-shadow: 1px -1px 2px rgba(0,0,0,0.2&#41;;")\n/desc [__EXTRA1__](#" style="text-decoration:none; display:block; background: #fff; color: __COLOR_TEXT__; border: 2px solid __COLOR_BG1__; padding: 10px; border-radius: 0 4px 4px 4px; border-left: 6px solid __COLOR_BG1__; box-shadow: 2px 2px 4px rgba(0,0,0,0.1&#41;; font-weight: bold; margin-top:-1px;")`,
+      preset: { Text: "#111827", Bg1: "#8b5cf6", Bg2: "#ffffff", Shadow: "#000000" }
+    },
+
+    // ---- 기존 템플릿들 ----
+    highlight_bg: {
+      macro: `/desc [__TEXT__](#" style="text-decoration:none; color:__COLOR_TEXT__; line-height:1.5; background-color:__COLOR_BG1__; padding:4px;")`,
+      preset: { Text: "#ffffff", Bg1: "#B9062F", Bg2: "#ffffff", Shadow: "#000000" }
+    },
+    dashed_box: {
+      macro: `/desc [__TEXT__](#" style="text-decoration:none; color:__COLOR_TEXT__; border:1px dashed __COLOR_SHADOW__; padding:4px;")`,
+      preset: { Text: "#000000", Bg1: "#ffffff", Bg2: "#ffffff", Shadow: "#000000" }
+    },
+    cartoon_box: {
+      macro: `/desc [__TEXT__](#" style="text-decoration:none; font-family: 'Comic Sans MS', 'Comic Sans', 'Independence_hall'; color: __COLOR_TEXT__; padding: 8px; background: __COLOR_BG1__; line-height: 170%; border: 1px solid __COLOR_SHADOW__; box-shadow: -2px 2px 0px __COLOR_SHADOW__; display:inline-block; margin: 7px; font-variant:small-caps;")`,
+      preset: { Text: "#000000", Bg1: "#ffd700", Bg2: "#ffffff", Shadow: "#000000" }
+    },
+    gradient_box: {
+      macro: `/desc [　__TEXT__　](#" style="font-weight: normal !important; font-style: normal !important; text-decoration:none; color:__COLOR_TEXT__; text-shadow:1px 3px 2px __COLOR_SHADOW__; border:0px solid; margin:1px; text-align:center; display:block; padding:2px; background-image: linear-gradient(135deg, __COLOR_BG1__, __COLOR_BG2__);")`,
+      preset: { Text: "#ffffff", Bg1: "#ff9a9e", Bg2: "#fecfef", Shadow: "#000000" }
+    },
+    memo_line: {
+      macro: `/desc [__TEXT__](#" style="background: __COLOR_BG1__; border-left: 7px solid __COLOR_SHADOW__; font-size:13px; padding: 5px; text-decoration:none; color:__COLOR_TEXT__; display:block;")`,
+      preset: { Text: "#333333", Bg1: "#F9F7F6", Bg2: "#ffffff", Shadow: "#9900ff" }
+    },
+    handout_box: {
+      macro: `/desc [**🔎 __EXTRA1__ │ ** __TEXT__](#" style="text-decoration:none; color: __COLOR_TEXT__; font-weight: bold; padding: 8px 12px; margin: 5px 5px 7px 5px; background: __COLOR_BG1__; line-height: 150%; border: 2px solid __COLOR_SHADOW__; box-shadow: -4px 4px 0px __COLOR_SHADOW__; display: inline-block;")`,
+      preset: { Text: "#696969", Bg1: "#ffffff", Bg2: "#ffffff", Shadow: "#696969" }
+    },
+    tv_static: {
+      macro: `/desc [__TEXT__](#" style="color:__COLOR_TEXT__; text-shadow: 1px 1px 3px __COLOR_SHADOW__, -1px -1px 3px __COLOR_SHADOW__, 0px 0px 5px __COLOR_SHADOW__; font-size: 14px; background-image:url('https://i.imgur.com/H79zWMS.png'&#41;; background-position: center center; background-size: 80px; background-repeat:repeat; text-decoration:none; display:block; padding:15px; text-align:center; font-weight:bold; letter-spacing:1px;")`,
+      preset: { Text: "#ffffff", Bg1: "#ffffff", Bg2: "#ffffff", Shadow: "#000000" }
+    },
+    think_bubble: {
+      macro: `/desc [●](#" style="color:__COLOR_BG1__; font-size:10px; text-shadow:1px 1px 1px __COLOR_SHADOW__; text-decoration:none;")[●](#" style="color:__COLOR_BG1__; font-size:15px; text-shadow:1px 1px 1px __COLOR_SHADOW__; text-decoration:none;") [__TEXT__](#" style="text-decoration:none; color:__COLOR_TEXT__; background:__COLOR_BG1__; border-radius:20px; line-height:1.3; padding:6.5px; display: inline-block; box-shadow: 1px 1px 1px __COLOR_SHADOW__;")`,
+      preset: { Text: "#000000", Bg1: "#ffffff", Bg2: "#ffffff", Shadow: "#97A9B9" }
+    },
+    kakao_send: {
+      macro: `/desc [__EXTRA2__](#" style="text-decoration:none; line-height:1.3; text-align:left; color: __COLOR_SHADOW__; font-size:10px;")　[__TEXT__](#" style="color:__COLOR_TEXT__; background: __COLOR_BG1__; border-radius: 15px 0px 15px 15px; padding: 8px; display: inline-block; line-height:1.3; box-shadow: 1px 1px 1px 1px #97A9B9; text-align:left; text-decoration:none; margin: 0px 0px 3px 0px; word-break:keep-all;")`,
+      preset: { Text: "#000000", Bg1: "#FFEB33", Bg2: "#ffffff", Shadow: "#333333" }
+    },
+    iphone_send: {
+      macro: `/desc [__TEXT__](#" style="color:__COLOR_TEXT__; background: __COLOR_BG1__; border-radius: 15px 15px 15px 0px; padding: 8px; display: inline-block; line-height:1.3; box-shadow: 1px 1px 1px 1px #97A9B9; text-align:left; text-decoration:none; margin: 0px 0px 3px 0px; word-break:keep-all;")　[ __EXTRA2__](#" style="text-decoration:none; line-height:1.3; text-align:left; color: __COLOR_SHADOW__; font-size:9px;")`,
+      preset: { Text: "#ffffff", Bg1: "#3478F6", Bg2: "#ffffff", Shadow: "#000000" }
+    },
+    line_send: {
+      macro: `/desc [__TEXT__](#" style="text-decoration:none; color: __COLOR_TEXT__; background: __COLOR_BG1__; border: 5px solid __COLOR_BG1__; border-radius: 0px 20px 20px 20px; box-shadow: 1px 1px 1px 1px #799096; padding: 8px; display: inline-block; margin: 0px 0px 3px 0px; line-height:1.3; text-align:left; word-break:keep-all;")　[읽음](#" style="text-decoration:none; color: __COLOR_SHADOW__; font-size:9px;") [__EXTRA2__](#" style="text-decoration:none; color: __COLOR_SHADOW__; font-size:9px;")`,
+      preset: { Text: "#000000", Bg1: "#F1F1F1", Bg2: "#ffffff", Shadow: "#666666" }
+    },
+    ruby_neon: {
+      macro: `/desc [__EXTRA1__](#" style="font-style: normal !important; font-family: 'Noto Sans KR', sans-serif; text-decoration:none; font-size:8pt; position:absolute; width:100%; top:8px; left:0px; font-weight:bold; line-height:1.5; display:block; text-decoration:none; color:__COLOR_TEXT__ !important;")[__TEXT__](#" style="text-decoration:none; display:block; text-align: center; font-family: Georgia, sans-serif; font-weight: bold; font-style: italic; font-size:20px; margin: 28px 0px 7px 0; color: __COLOR_TEXT__; text-shadow: 0 0 2px white, 0 0 3px __COLOR_SHADOW__, 0 0 10px __COLOR_SHADOW__;")`,
+      preset: { Text: "#ffffff", Bg1: "#000000", Bg2: "#ffffff", Shadow: "#9900ff" }
+    },
+    madness: {
+      macro: `/desc [__EXTRA1__](#" style="text-decoration:none; font-size: 17px; font-weight: bold; text-shadow:1px 2px 1px __COLOR_BG1__,-2px 2px 1px __COLOR_SHADOW__; color:__COLOR_TEXT__;")의 [__TEXT__](#" style="text-decoration:none; font-size: 17px; text-shadow:1px 1px 1px __COLOR_BG1__,-2px 1px 1px __COLOR_SHADOW__; color:__COLOR_TEXT__;")`,
+      preset: { Text: "#000000", Bg1: "#77FFC8", Bg2: "#ffffff", Shadow: "#DB91FF" }
+    },
+    blur_text_heavy: {
+      macro: `/desc [__TEXT__](#" style="font-style: normal !important; color:rgba(0,0,0,0&#41;; text-shadow:0px 0px 8px __COLOR_SHADOW__, 0px 0px 8px __COLOR_SHADOW__; font-size:15px; line-height:20px; text-decoration:none; display:block; text-align:center;")`,
+      preset: { Text: "#ffffff", Bg1: "#ffffff", Bg2: "#ffffff", Shadow: "#111111" }
+    },
+    bgm_play2: {
+      macro: `/desc [♪　__EXTRA1__　▶ ■](__EXTRA2__ #" style="font-size: 12px; font-family: gulim !important; color: __COLOR_TEXT__; background: __COLOR_BG1__; text-align: center; display: inline-block; padding: 5px 15px; font-style: normal !important; font-weight: normal !important; border-radius: 20px; margin-left: -4px; text-decoration: none; border: 1px solid __COLOR_SHADOW__; box-shadow: 2px 2px 0 __COLOR_SHADOW__; letter-spacing: -1px;")`,
+      preset: { Text: "#333333", Bg1: "#ffffff", Bg2: "#ffffff", Shadow: "#333333" }
+    },
+    roll20_table: {
+      macro: `&{template:default} {{name=[__EXTRA1__](#" style="text-decoration: none; color: __COLOR_TEXT__; display:block; margin:-4px; padding:5px; margin-bottom:-6px; text-align:center; font-weight: bold; font-size:14px; background-image: linear-gradient(to right, __COLOR_BG1__, __COLOR_BG2__);")}}{{내용=__TEXT__}}`,
+      preset: { Text: "#ffffff", Bg1: "#702082", Bg2: "#3c78d8", Shadow: "#000000" }
+    }
+  };
+
+  // ==========================================
+  // 2. 파싱 및 렌더링 엔진
+  // ==========================================
+  function parseRoll20Markdown(text) {
+    let html = text.replace(/^\/(desc|emas|me|w|as)\s+/gm, '');
+    
+    // 테이블 매크로 처리
+    if (html.includes('&{template:default}')) {
+        html = html.replace(/&{template:default}\s*/g, '');
+        let tableHtml = `<div style="border: 1px solid #7E2D40; border-radius: 5px; overflow: hidden; background: white; margin-bottom: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">`;
+        
+        const parts = [...html.matchAll(/{{([^=]+?)(?:=([\s\S]*?))?}}/g)];
+        parts.forEach((match) => {
+            let key = match[1] ? match[1].trim() : '';
+            let val = match[2] ? match[2].trim() : '';
+            
+            key = applyLinkRegex(key);
+            val = applyLinkRegex(val);
+            
+            if(key.startsWith('name=')) {
+                key = key.replace('name=', '');
+                tableHtml += `<div style="background: #7E2D40; color: white; padding: 5px; font-weight: bold; font-size:1.1em; text-align:center;">${key}</div>`;
+            } else {
+                tableHtml += `<div style="padding: 5px; border-top: 1px solid #e0e0e0; display: flex; font-size:13px;"><span style="font-weight:bold; margin-right: 8px;">${key}</span> <span style="flex-grow:1;">${val}</span></div>`;
+            }
+        });
+        tableHtml += `</div>`;
+        return tableHtml;
+    }
+
+    html = applyLinkRegex(html);
+    html = html.replace(/\n/g, '<br>');
+    return html;
+  }
+
+  function applyLinkRegex(str) {
+    const regex = /\[([\s\S]*?)\]\((.*?)(?:#|%23)"\s*style="([\s\S]*?)"\)/gi;
+    return str.replace(regex, function(match, content, url, style) {
+        style = style.replace(/&rpar;/gi, ')').replace(/&#41;/gi, ')');
+        return `<a href="javascript:void(0)" style="text-decoration:none; cursor:default; ${style}">${content}</a>`;
+    });
+  }
+
+  // ==========================================
+  // 3. 컨트롤러 (UI 및 이벤트 처리)
+  // ==========================================
+
+  // 색상 동기화 함수
+  function syncColor(type, source) {
+    const picker = document.getElementById(`color${type}`);
+    const hexInput = document.getElementById(`hex${type}`);
+    
+    if (source === 'picker') {
+      hexInput.value = picker.value.toUpperCase();
+    } else if (source === 'hex') {
+      let val = hexInput.value.trim();
+      if (!val.startsWith('#')) val = '#' + val;
+      if (/^#[0-9A-F]{6}$/i.test(val)) {
+        picker.value = val;
+      }
+    }
+    generateMacro();
+  }
+
+  // 템플릿 적용 시 색상 값 세팅
+  function applyPreset() {
+    if (!templates[currentTemplate]) return;
+    const preset = templates[currentTemplate].preset;
+    
+    ['Text', 'Bg1', 'Bg2', 'Shadow'].forEach(type => {
+      const hexVal = preset[type].toUpperCase();
+      document.getElementById(`color${type}`).value = hexVal;
+      document.getElementById(`hex${type}`).value = hexVal;
+    });
+    
+    generateMacro();
+  }
+
+  // 매크로 생성 및 업데이트
+  function generateMacro() {
+    if (!templates[currentTemplate]) return;
+    const text = document.getElementById('inputText').value;
+    const extra1 = document.getElementById('inputExtra1').value;
+    const extra2 = document.getElementById('inputExtra2').value;
+    
+    const cText = document.getElementById('colorText').value;
+    const cBg1 = document.getElementById('colorBg1').value;
+    const cBg2 = document.getElementById('colorBg2').value;
+    const cShadow = document.getElementById('colorShadow').value;
+
+    let resultMacro = templates[currentTemplate].macro;
+
+    resultMacro = resultMacro.replace(/__TEXT__/g, text)
+                             .replace(/__EXTRA1__/g, extra1)
+                             .replace(/__EXTRA2__/g, extra2)
+                             .replace(/__COLOR_TEXT__/g, cText)
+                             .replace(/__COLOR_BG1__/g, cBg1)
+                             .replace(/__COLOR_BG2__/g, cBg2)
+                             .replace(/__COLOR_SHADOW__/g, cShadow);
+
+    // GM 모드 (/desc) 켜기/끄기 적용
+    const useDesc = document.getElementById('useDescToggle').checked;
+    if (!useDesc) {
+      // 맨 앞 및 줄바꿈 뒤의 /desc 와 공백을 제거
+      resultMacro = resultMacro.replace(/^\/desc\s+/gm, '');
+    }
+
+    document.getElementById('outputCode').value = resultMacro;
+    updatePreviewFromCode();
+  }
+
+  function updatePreviewFromCode() {
+    const currentCode = document.getElementById('outputCode').value;
+    const previewBox = document.getElementById('previewBox');
+    previewBox.innerHTML = parseRoll20Markdown(currentCode);
+  }
+
+  function resetColors() {
+    applyPreset();
+  }
+
+  function copyCode() {
+    const codeArea = document.getElementById('outputCode');
+    codeArea.select();
+    document.execCommand('copy');
+    
+    const btn = document.getElementById('copyBtn');
+    const originalContent = btn.innerHTML;
+    btn.innerHTML = `<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg> 복사 완료!`;
+    btn.style.background = "#10b981";
+    btn.style.boxShadow = "0 4px 6px -1px rgba(16, 185, 129, 0.3)";
+    
+    setTimeout(() => {
+      btn.innerHTML = originalContent;
+      btn.style.background = "";
+      btn.style.boxShadow = "";
+    }, 2000);
+  }
+
+  // 초기 실행 및 이벤트 바인딩
+  window.onload = () => {
+    // 스크롤 리스트 클릭 이벤트 세팅
+    const listItems = document.querySelectorAll('.template-item');
+    listItems.forEach(item => {
+      item.addEventListener('click', () => {
+        // 기존 active 제거
+        listItems.forEach(i => i.classList.remove('active'));
+        // 클릭된 항목에 active 추가
+        item.classList.add('active');
+        
+        // 현재 템플릿 변경 및 적용
+        currentTemplate = item.dataset.value;
+        applyPreset();
+      });
+    });
+
+    applyPreset(); // 초기 템플릿 로딩
+  };
+</script>
+</body>
+</html>
