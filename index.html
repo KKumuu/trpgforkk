@@ -25,7 +25,9 @@
         }
 
         body {
-            background-color: var(--color-ivory);
+            /* 연노란색에서 연핑크색으로 이어지는 그라데이션 배경 적용 */
+            background: linear-gradient(to bottom, var(--color-ivory) 0%, #ffe6f0 100%);
+            background-attachment: fixed;
             color: var(--color-ink);
             font-family: 'Galmuri9', sans-serif;
             overflow-x: hidden;
@@ -41,7 +43,7 @@
         .folder-container {
             position: relative;
             transition: all 0.2s ease-in-out;
-            margin-bottom: 1.5rem; /* 세로 간격 */
+            margin-bottom: 0.5rem; /* 세로 간격을 1rem에서 0.5rem으로 대폭 줄임 */
             width: 100%;
         }
 
@@ -67,7 +69,7 @@
             z-index: 10;
             border: 1px solid rgba(0,0,0,0.1);
             border-radius: 4px;
-            padding: 1rem;
+            padding: 0.5rem 0.75rem; /* 상하 패딩을 줄여 높이 대폭 감소 */
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -308,7 +310,6 @@
         .window-popup.center-popup.open {
             animation: popInCenter 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
-
     </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4 lg:p-10">
@@ -319,28 +320,51 @@
         <aside class="lg:col-span-3 flex flex-col justify-center gap-2">
             
             <!-- 타이틀 -->
-            <div class="mb-6 pl-2">
+            <div class="mb-4 pl-2">
                 <h1 class="text-2xl font-bold text-gray-800 leading-tight">KKfolia<br>바구니</h1>
                 <p class="text-xs text-gray-500 mt-1">CCFolia를 좀 더 편하게 하자</p>
             </div>
 
-            <!-- 바로가기: 누덕누덕 설정틀 -->
-            <a href="https://kkumuu.github.io/character-sheet/" target="_blank" 
-               class="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all mb-4 group">
-                <div class="bg-deep-pink p-1.5 rounded text-white group-hover:scale-110 transition-transform">
-                    <i data-lucide="link" class="w-4 h-4"></i>
+            <!-- 바로가기: 설정틀 그룹 -->
+            <div class="flex items-center gap-2 mb-1 pl-2">
+                <!-- 1. 누덕누덕 설정틀 -->
+                <div class="relative group">
+                    <a href="https://kkumuu.github.io/character-sheet/" target="_blank" 
+                       class="flex items-center justify-center w-10 h-10 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all">
+                        <div class="bg-deep-pink p-1.5 rounded text-white group-hover:scale-110 transition-transform">
+                            <i data-lucide="link" class="w-4 h-4"></i>
+                        </div>
+                    </a>
+                    <!-- 툴팁 (마우스 오버 시 표시) -->
+                    <div class="absolute left-1/2 -translate-x-1/2 top-full mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-gray-800 text-white text-[10px] px-2 py-1 rounded pointer-events-none whitespace-nowrap z-50">
+                        누덕누덕 설정틀
+                    </div>
                 </div>
-                <span class="text-xs font-bold text-gray-600 group-hover:text-deep-pink">누덕누덕 설정틀</span>
-            </a>
+
+                <!-- 2. 설정틀 2 (H.html) -->
+                <div class="relative group">
+                    <a href="./H.html" target="_blank" 
+                       class="flex items-center justify-center w-10 h-10 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all">
+                        <div class="bg-sky p-1.5 rounded text-ink group-hover:scale-110 transition-transform">
+                            <!-- 아이콘을 layers에서 link로 변경 -->
+                            <i data-lucide="link" class="w-4 h-4"></i>
+                        </div>
+                    </a>
+                    <!-- 툴팁 (마우스 오버 시 표시) -->
+                    <div class="absolute left-1/2 -translate-x-1/2 top-full mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-gray-800 text-white text-[10px] px-2 py-1 rounded pointer-events-none whitespace-nowrap z-50">
+                        누덕누덕 설정틀2
+                    </div>
+                </div>
+            </div>
 
             <!-- 구분선 -->
-            <div class="h-px bg-gray-200 my-2 mx-2"></div>
+            <div class="h-px bg-gray-200 my-1 mx-2"></div>
 
-            <!-- 폴더 1: 로그 변환 (글씨색 text-ink로 변경) -->
+            <!-- 폴더 1: 로그 변환 -->
             <a href="./A.html" class="folder-container block group">
                 <div class="folder-tab bg-deep-pink"></div>
                 <div class="folder-body bg-deep-pink">
-                    <div class="text-ink"> <!-- text-white -> text-ink 변경 -->
+                    <div class="text-ink">
                         <div class="text-sm font-bold group-hover:underline">로그 변환</div>
                         <div class="text-[10px] opacity-90">Log to PDF</div>
                     </div>
@@ -392,7 +416,49 @@
                 </div>
             </a>
 
-            <p class="text-[10px] text-gray-400 mt-4 pl-2">&copy; 2025 kkumuu</p>
+            <!-- 폴더 5: 스탠딩 크롭기 -->
+            <a href="./E.html" class="folder-container block group">
+                <div class="folder-tab bg-deep-pink"></div>
+                <div class="folder-body bg-deep-pink">
+                    <div class="text-ink">
+                        <div class="text-sm font-bold group-hover:underline">스탠딩 크롭기</div>
+                        <div class="text-[10px] opacity-90">Standing Cropper</div>
+                    </div>
+                    <div class="bg-white p-1.5 rounded text-deep-pink shadow-sm">
+                        <span class="material-icons md-18" style="font-size: 18px;">crop</span>
+                    </div>
+                </div>
+            </a>
+
+            <!-- 폴더 6: APNG 메이커 -->
+            <a href="./F.html" class="folder-container block group">
+                <div class="folder-tab bg-sky"></div>
+                <div class="folder-body bg-sky">
+                    <div class="text-ink">
+                        <div class="text-sm font-bold group-hover:underline">APNG 메이커</div>
+                        <div class="text-[10px] opacity-80">APNG Maker</div>
+                    </div>
+                    <div class="bg-white p-1.5 rounded text-sky-600 shadow-sm">
+                        <span class="material-icons md-18" style="font-size: 18px;">animation</span>
+                    </div>
+                </div>
+            </a>
+
+            <!-- 폴더 7: 인세인 시트 api -->
+            <a href="./G.html" class="folder-container block group">
+                <div class="folder-tab bg-mint"></div>
+                <div class="folder-body bg-mint">
+                    <div class="text-ink">
+                        <div class="text-sm font-bold group-hover:underline">인세인 시트 api</div>
+                        <div class="text-[10px] opacity-80">Sheet API</div>
+                    </div>
+                    <div class="bg-white p-1.5 rounded text-green-600 shadow-sm">
+                        <span class="material-icons md-18" style="font-size: 18px;">api</span>
+                    </div>
+                </div>
+            </a>
+
+            <p class="text-[10px] text-gray-400 mt-2 pl-2">&copy; 2025 kkumuu</p>
         </aside>
 
         <!-- 중앙: 모니터 영역 -->
@@ -571,7 +637,6 @@
                             </div>
                         </div>
                     </div>
-
 
                     <!-- 태스크바 -->
                     <div class="taskbar">
