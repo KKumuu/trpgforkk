@@ -150,6 +150,37 @@
             </button>
         </div>
 
+        <!-- 데이터 슬롯 및 초기화 -->
+        <div class="flex flex-wrap gap-2 justify-between items-center px-1 mb-2">
+            <div class="flex flex-wrap gap-2">
+                <!-- SLOT 1 -->
+                <div class="flex items-center gap-1 theme-card px-2 py-1 shadow-sm !rounded-full !p-1.5">
+                    <span class="font-bold opacity-80 text-[10px] ml-1">SLOT 1</span>
+                    <span id="slot-indicator-1" class="text-[8px] opacity-30 text-[var(--color-primary)] ml-0.5 transition-opacity">●</span>
+                    <button onclick="saveToSlot(1)" class="hover:scale-110 transition-transform text-[12px] px-1 ml-1" title="현재 상태를 이 슬롯에 저장">💾</button>
+                    <button onclick="loadFromSlot(1)" class="hover:scale-110 transition-transform text-[12px] px-1" title="이 슬롯의 데이터 불러오기">📂</button>
+                </div>
+                <!-- SLOT 2 -->
+                <div class="flex items-center gap-1 theme-card px-2 py-1 shadow-sm !rounded-full !p-1.5">
+                    <span class="font-bold opacity-80 text-[10px] ml-1">SLOT 2</span>
+                    <span id="slot-indicator-2" class="text-[8px] opacity-30 text-[var(--color-primary)] ml-0.5 transition-opacity">●</span>
+                    <button onclick="saveToSlot(2)" class="hover:scale-110 transition-transform text-[12px] px-1 ml-1" title="현재 상태를 이 슬롯에 저장">💾</button>
+                    <button onclick="loadFromSlot(2)" class="hover:scale-110 transition-transform text-[12px] px-1" title="이 슬롯의 데이터 불러오기">📂</button>
+                </div>
+                <!-- SLOT 3 -->
+                <div class="flex items-center gap-1 theme-card px-2 py-1 shadow-sm !rounded-full !p-1.5">
+                    <span class="font-bold opacity-80 text-[10px] ml-1">SLOT 3</span>
+                    <span id="slot-indicator-3" class="text-[8px] opacity-30 text-[var(--color-primary)] ml-0.5 transition-opacity">●</span>
+                    <button onclick="saveToSlot(3)" class="hover:scale-110 transition-transform text-[12px] px-1 ml-1" title="현재 상태를 이 슬롯에 저장">💾</button>
+                    <button onclick="loadFromSlot(3)" class="hover:scale-110 transition-transform text-[12px] px-1" title="이 슬롯의 데이터 불러오기">📂</button>
+                </div>
+            </div>
+            
+            <button id="resetBtn" onclick="handleReset()" class="theme-card px-3 py-1.5 shadow-sm !rounded-full text-xs font-bold transition-all" style="color: var(--color-primary);">
+                ↺ 전체 초기화
+            </button>
+        </div>
+
         <!-- Section 1: 캐릭터 기본 정보 / 상태치 / 메모 등 -->
         <div class="theme-card flex flex-col md:flex-row gap-4">
             
@@ -305,6 +336,9 @@
         ];
         let abilityCounter = 3;
 
+        let resetStep = 0;
+        let toastTimer = null;
+
         document.addEventListener('DOMContentLoaded', () => {
             // Theme setup
             const toggle = document.getElementById('themeToggle');
@@ -339,6 +373,7 @@
             renderSkillTable();
             renderAbilities();
             updatePreview();
+            updateSlotUI(); // 슬롯 상태 표시 업데이트
 
             // Event listeners for auto-updates
             document.querySelectorAll('input, textarea, select').forEach(el => {
@@ -512,8 +547,8 @@
             saveData();
         }
 
-        function saveData() {
-            const data = {
+        function getFormData() {
+            return {
                 name: document.getElementById('charName').value,
                 color: document.getElementById('charColor').value,
                 useDefaultColor: document.getElementById('useDefaultColor').checked,
@@ -531,38 +566,136 @@
                 selectedSkills: Array.from(selectedSkills),
                 abilities: abilities
             };
-            localStorage.setItem('kk_insane_maker', JSON.stringify(data));
+        }
+
+        function setFormData(data) {
+            if(data.name !== undefined) document.getElementById('charName').value = data.name;
+            if(data.color !== undefined) document.getElementById('charColor').value = data.color;
+            if(data.useDefaultColor !== undefined) {
+                document.getElementById('useDefaultColor').checked = data.useDefaultColor;
+                document.getElementById('charColor').disabled = data.useDefaultColor;
+            }
+            if(data.hpCur !== undefined) document.getElementById('hpCurrent').value = data.hpCur;
+            if(data.hpMax !== undefined) document.getElementById('hpMax').value = data.hpMax;
+            if(data.sanCur !== undefined) document.getElementById('sanCurrent').value = data.sanCur;
+            if(data.sanMax !== undefined) document.getElementById('sanMax').value = data.sanMax;
+            if(data.itemPain !== undefined) document.getElementById('itemPainkiller').value = data.itemPain;
+            if(data.itemWeap !== undefined) document.getElementById('itemWeapon').value = data.itemWeap;
+            if(data.itemAmul !== undefined) document.getElementById('itemAmulet').value = data.itemAmul;
+            if(data.curiosity !== undefined) document.getElementById('curiosity').value = data.curiosity;
+            if(data.fear !== undefined) document.getElementById('fear').value = data.fear;
+            if(data.memo !== undefined) document.getElementById('charMemo').value = data.memo;
+            if(data.customPalette !== undefined) document.getElementById('customPalette').value = data.customPalette;
+            
+            if(data.selectedSkills) selectedSkills = new Set(data.selectedSkills);
+            else selectedSkills = new Set();
+            
+            if(data.abilities && data.abilities.length > 0) {
+                abilities = data.abilities;
+                abilityCounter = Math.max(...abilities.map(a => a.id)) + 1;
+            } else {
+                abilities = [];
+            }
+            
+            renderSkillTable();
+            renderAbilities();
+            updatePreview();
+        }
+
+        function saveData() {
+            localStorage.setItem('kk_insane_maker', JSON.stringify(getFormData()));
         }
 
         function loadData() {
             const saved = localStorage.getItem('kk_insane_maker');
             if(saved) {
                 try {
-                    const data = JSON.parse(saved);
-                    if(data.name !== undefined) document.getElementById('charName').value = data.name;
-                    if(data.color !== undefined) document.getElementById('charColor').value = data.color;
-                    if(data.useDefaultColor !== undefined) {
-                        document.getElementById('useDefaultColor').checked = data.useDefaultColor;
-                        document.getElementById('charColor').disabled = data.useDefaultColor;
-                    }
-                    if(data.hpCur !== undefined) document.getElementById('hpCurrent').value = data.hpCur;
-                    if(data.hpMax !== undefined) document.getElementById('hpMax').value = data.hpMax;
-                    if(data.sanCur !== undefined) document.getElementById('sanCurrent').value = data.sanCur;
-                    if(data.sanMax !== undefined) document.getElementById('sanMax').value = data.sanMax;
-                    if(data.itemPain !== undefined) document.getElementById('itemPainkiller').value = data.itemPain;
-                    if(data.itemWeap !== undefined) document.getElementById('itemWeapon').value = data.itemWeap;
-                    if(data.itemAmul !== undefined) document.getElementById('itemAmulet').value = data.itemAmul;
-                    if(data.curiosity !== undefined) document.getElementById('curiosity').value = data.curiosity;
-                    if(data.fear !== undefined) document.getElementById('fear').value = data.fear;
-                    if(data.memo !== undefined) document.getElementById('charMemo').value = data.memo;
-                    if(data.customPalette !== undefined) document.getElementById('customPalette').value = data.customPalette;
-                    
-                    if(data.selectedSkills) selectedSkills = new Set(data.selectedSkills);
-                    if(data.abilities && data.abilities.length > 0) {
-                        abilities = data.abilities;
-                        abilityCounter = Math.max(...abilities.map(a => a.id)) + 1;
-                    }
+                    setFormData(JSON.parse(saved));
                 } catch(e) { console.error("데이터 로드 오류", e); }
+            }
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toastMessage');
+            toast.textContent = msg;
+            toast.classList.remove('hidden');
+            toast.classList.add('flex');
+            
+            if(toastTimer) clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => {
+                toast.classList.add('hidden');
+                toast.classList.remove('flex');
+            }, 3000);
+        }
+
+        function handleReset() {
+            const btn = document.getElementById('resetBtn');
+            if (resetStep === 0) {
+                btn.innerHTML = '⚠️ 정말 초기화? (확인)';
+                btn.style.backgroundColor = 'var(--color-deep-pink)';
+                btn.style.color = 'var(--text-button)';
+                resetStep = 1;
+                setTimeout(() => {
+                    if (resetStep === 1) {
+                        resetStep = 0;
+                        btn.innerHTML = '↺ 전체 초기화';
+                        btn.style.backgroundColor = '';
+                        btn.style.color = 'var(--color-primary)';
+                    }
+                }, 3000);
+            } else {
+                setFormData({
+                    name: '', color: '#ffffff', useDefaultColor: true,
+                    hpCur: 6, hpMax: 6, sanCur: 6, sanMax: 6,
+                    itemPain: 0, itemWeap: 0, itemAmul: 0,
+                    curiosity: 3, fear: '', memo: '', customPalette: '',
+                    selectedSkills: [],
+                    abilities: [
+                        { id: 1, name: '기본공격', type: '공격', target: '자유', effect: '목표 1명을 선택해서 명중판정을 한다.\n성공하고, 목표가 회피에 실패하면 1D6점 대미지.' },
+                        { id: 2, name: '전장이동', type: '서포트', target: '없음', effect: '지원행동. 이 어빌리티를 사용하면 전투에 참가한 캐릭터 전원은 다음 라운드의 [라운드 시작]에 플롯을 한다.' }
+                    ]
+                });
+                showToast("✓ 모든 데이터가 초기화되었습니다.");
+                
+                btn.innerHTML = '↺ 전체 초기화';
+                btn.style.backgroundColor = '';
+                btn.style.color = 'var(--color-primary)';
+                resetStep = 0;
+            }
+        }
+
+        function updateSlotUI() {
+            for(let i=1; i<=3; i++) {
+                const hasData = localStorage.getItem('kk_insane_slot_' + i);
+                const indicator = document.getElementById('slot-indicator-' + i);
+                if(indicator) {
+                    if(hasData) {
+                        indicator.classList.remove('opacity-30');
+                    } else {
+                        indicator.classList.add('opacity-30');
+                    }
+                }
+            }
+        }
+
+        function saveToSlot(slotNum) {
+            localStorage.setItem('kk_insane_slot_' + slotNum, JSON.stringify(getFormData()));
+            showToast(`✓ 슬롯 ${slotNum}에 저장되었습니다.`);
+            updateSlotUI();
+        }
+
+        function loadFromSlot(slotNum) {
+            const saved = localStorage.getItem('kk_insane_slot_' + slotNum);
+            if(saved) {
+                try {
+                    setFormData(JSON.parse(saved));
+                    saveData();
+                    showToast(`✓ 슬롯 ${slotNum} 데이터를 불러왔습니다.`);
+                } catch(e) {
+                    showToast(`⚠ 슬롯 ${slotNum} 데이터를 읽을 수 없습니다.`);
+                }
+            } else {
+                showToast(`⚠ 슬롯 ${slotNum}이(가) 비어있습니다.`);
             }
         }
 
@@ -620,15 +753,9 @@
 
             try {
                 document.execCommand('copy');
-                const toast = document.getElementById('toastMessage');
-                toast.classList.remove('hidden');
-                toast.classList.add('flex');
-                setTimeout(() => {
-                    toast.classList.add('hidden');
-                    toast.classList.remove('flex');
-                }, 3000);
+                showToast("✓ 복사 성공! 코코포리아 방에 붙여넣으세요.");
             } catch (err) {
-                alert('복사에 실패했습니다.');
+                showToast("⚠ 복사에 실패했습니다.");
             } finally {
                 document.body.removeChild(tempTextArea);
             }
