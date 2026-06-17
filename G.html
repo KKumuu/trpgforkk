@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>인세인(inSANe) 코코포리아 메이커</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 폰트: 갈무리9 */
+        @import url('https://cdn.jsdelivr.net/npm/galmuri@latest/dist/galmuri.css');
+
+        /* 허용된 6가지 색상 변수 */
+        :root {
+            --color-deep-pink: #F875AA;
+            --color-soft-pink: #FDEDED;
+            --color-mint: #EDFFF0;
+            --color-sky: #AEDEFC;
+            --color-ink: #333333;
+            --color-ivory: #FFFFF0;
+        }
+
+        /* 라이트 모드 (기본 테마) 매핑 */
+        :root {
+            --bg-body: var(--color-ivory);
+            --bg-card: var(--color-soft-pink);
+            --bg-input: var(--color-ivory);
+            --bg-accent: var(--color-mint);
+            
+            --text-main: var(--color-ink);
+            --text-button: var(--color-ivory);
+            
+            --border-main: var(--color-deep-pink);
+            --border-input: var(--color-deep-pink);
+            
+            --color-primary: var(--color-deep-pink);
+        }
+
+        /* 다크 모드 테마 매핑 */
+        html.dark {
+            --bg-body: var(--color-ink);
+            --bg-card: var(--color-ink);
+            --bg-input: var(--color-ink);
+            --bg-accent: var(--color-ink);
+            
+            --text-main: var(--color-ivory);
+            --text-button: var(--color-ink);
+            
+            --border-main: var(--color-sky);
+            --border-input: var(--color-sky);
+            
+            --color-primary: var(--color-sky);
+        }
+
+        body {
+            font-family: 'Galmuri9', sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            transition: background-color 0.3s, color 0.3s;
+            overflow-x: hidden;
+        }
+
+        /* 스크롤바 커스텀 */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-body); }
+        ::-webkit-scrollbar-thumb { background: var(--color-primary); border-radius: 4px; }
+
+        /* 공통 UI 컴포넌트 */
+        .theme-card {
+            background-color: var(--bg-card);
+            border: 2px solid var(--border-main);
+            border-radius: 12px;
+            box-shadow: 4px 4px 0px rgba(0,0,0,0.05);
+            padding: 1rem;
+        }
+
+        .theme-input {
+            background-color: var(--bg-input);
+            border: 1px solid var(--border-input);
+            color: var(--text-main);
+            border-radius: 6px;
+            padding: 0.4rem 0.6rem;
+            outline: none;
+            transition: box-shadow 0.2s;
+        }
+        .theme-input:focus {
+            box-shadow: 0 0 0 2px var(--color-primary);
+        }
+
+        .theme-btn {
+            background-color: var(--color-primary);
+            color: var(--text-button);
+            border: 2px solid var(--text-main);
+            font-weight: bold;
+            transition: transform 0.1s, filter 0.2s;
+        }
+        .theme-btn:hover {
+            filter: brightness(1.1);
+        }
+        .theme-btn:active {
+            transform: translate(1px, 1px);
+        }
+
+        /* 틈새 선 (진한 핑크 점선) */
+        .gap-line {
+            border-left: 4px dotted transparent;
+            margin: 0 4px;
+            transition: border-color 0.3s;
+        }
+        .gap-line.active {
+            border-left: 4px dotted var(--color-deep-pink);
+        }
+        html.dark .gap-line.active {
+            border-left: 4px dotted var(--color-sky);
+        }
+
+        /* 특기 표 셀 스타일 */
+        .skill-item {
+            cursor: pointer;
+            border: 1px solid var(--border-input);
+            background-color: var(--bg-input);
+            transition: all 0.2s;
+            font-size: 13px; /* 특기표 폰트 살짝 확대 */
+        }
+        .skill-item:hover {
+            filter: brightness(0.95);
+        }
+        
+        /* 체크된 특기 */
+        .skill-item.checked {
+            background-color: var(--color-primary);
+            color: var(--text-button);
+            border-color: var(--text-main);
+            font-weight: bold;
+            box-shadow: inset 1px 1px 3px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex justify-center py-6 px-4 pb-24 text-xs md:text-sm">
+
+    <div class="max-w-5xl w-full flex flex-col gap-4">
+        
+        <!-- Header -->
+        <div class="flex justify-between items-center px-2 mb-2">
+            <h1 class="text-xl md:text-2xl font-bold flex items-center gap-2" style="color: var(--color-primary);">
+                <span>inSANe</span> 
+                <span style="color: var(--text-main); font-size: 0.7em;">코코포리아 메이커</span>
+            </h1>
+            <button id="themeToggle" class="theme-card px-3 py-1.5 hover:scale-105 transition-transform flex items-center gap-2 cursor-pointer font-bold">
+                🌙 다크모드
+            </button>
+        </div>
+
+        <!-- Section 1: 캐릭터 기본 정보 / 상태치 / 메모 등 -->
+        <div class="theme-card flex flex-col md:flex-row gap-4">
+            
+            <!-- 왼쪽 열: 이름, 색상, 아이템 -->
+            <div class="flex flex-col gap-3 w-full md:w-1/3">
+                <div class="flex flex-col gap-1">
+                    <label class="font-bold opacity-80">캐릭터 이름</label>
+                    <input type="text" id="charName" placeholder="봉마인" class="theme-input w-full">
+                </div>
+                
+                <div class="flex flex-col gap-1">
+                    <label class="font-bold opacity-80">채팅 색상</label>
+                    <div class="flex items-center gap-2 theme-input p-1">
+                        <input type="color" id="charColor" value="#ffffff" class="w-8 h-8 rounded cursor-pointer border border-gray-300" disabled>
+                        <label class="flex items-center gap-2 cursor-pointer font-bold ml-1 flex-grow">
+                            <input type="checkbox" id="useDefaultColor" checked class="w-4 h-4 cursor-pointer">
+                            없음 (기본)
+                        </label>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-1 mt-auto">
+                    <label class="font-bold opacity-80">아이템</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <div class="flex flex-col items-center p-1 border rounded" style="border-color: var(--border-input); background-color: var(--bg-accent);">
+                            <span class="text-[10px] font-bold mb-1">진통제</span>
+                            <input type="number" id="itemPainkiller" value="0" min="0" class="theme-input w-full text-center p-1 text-xs">
+                        </div>
+                        <div class="flex flex-col items-center p-1 border rounded" style="border-color: var(--border-input); background-color: var(--bg-accent);">
+                            <span class="text-[10px] font-bold mb-1">무기</span>
+                            <input type="number" id="itemWeapon" value="0" min="0" class="theme-input w-full text-center p-1 text-xs">
+                        </div>
+                        <div class="flex flex-col items-center p-1 border rounded" style="border-color: var(--border-input); background-color: var(--bg-accent);">
+                            <span class="text-[10px] font-bold mb-1">부적</span>
+                            <input type="number" id="itemAmulet" value="0" min="0" class="theme-input w-full text-center p-1 text-xs">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 가운데 열: 생명력/이성치, 호기심/공포심 -->
+            <div class="flex flex-col gap-3 w-full md:w-1/3">
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="flex flex-col items-center p-2 rounded border" style="border-color: var(--border-input); background-color: var(--bg-accent);">
+                        <label class="font-bold mb-1">생명력</label>
+                        <div class="flex items-center justify-center gap-1">
+                            <input type="number" id="hpCurrent" value="6" min="0" class="theme-input w-10 text-center font-bold p-1">
+                            <span class="font-bold">/</span>
+                            <input type="number" id="hpMax" value="6" min="1" class="theme-input w-10 text-center p-1 text-[10px]">
+                        </div>
+                    </div>
+                    <div class="flex flex-col items-center p-2 rounded border" style="border-color: var(--border-input); background-color: var(--bg-accent);">
+                        <label class="font-bold mb-1">이성치</label>
+                        <div class="flex items-center justify-center gap-1">
+                            <input type="number" id="sanCurrent" value="6" min="0" class="theme-input w-10 text-center font-bold p-1">
+                            <span class="font-bold">/</span>
+                            <input type="number" id="sanMax" value="6" min="1" class="theme-input w-10 text-center p-1 text-[10px]">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-1">
+                    <label class="font-bold opacity-80">호기심 (해당 분야 틈새 제거)</label>
+                    <select id="curiosity" class="theme-input w-full">
+                        <option value="1">1. 폭력</option>
+                        <option value="2">2. 정서</option>
+                        <option value="3" selected>3. 지각</option>
+                        <option value="4">4. 기술</option>
+                        <option value="5">5. 지식</option>
+                        <option value="6">6. 괴이</option>
+                    </select>
+                </div>
+
+                <div class="flex flex-col gap-1 mt-auto">
+                    <label class="font-bold opacity-80">공포심</label>
+                    <input type="text" id="fear" placeholder="예: 죽음, 피" class="theme-input w-full">
+                </div>
+            </div>
+
+            <!-- 오른쪽 열: 캐릭터 메모 -->
+            <div class="flex flex-col gap-1 w-full md:w-1/3">
+                <label class="font-bold opacity-80">캐릭터 메모</label>
+                <textarea id="charMemo" placeholder="여기에 적은 내용만 메모로 들어갑니다." class="theme-input w-full flex-grow resize-none" style="min-height: 120px;"></textarea>
+            </div>
+
+        </div>
+
+        <!-- Section 2: 특기표 -->
+        <div class="theme-card flex flex-col">
+            <h2 class="font-bold mb-3 text-lg flex items-center gap-2" style="color: var(--color-primary);">❖ 특기표</h2>
+            <div class="overflow-x-auto">
+                <div class="flex justify-between w-full min-w-[700px] pb-2 gap-1" id="skillTableContainer">
+                    <!-- Javascript will generate the flex grid here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 3: 어빌리티 -->
+        <div class="theme-card flex flex-col">
+            <div class="flex justify-between items-center mb-3">
+                <h2 class="font-bold text-lg flex items-center gap-2" style="color: var(--color-primary);">❖ 어빌리티</h2>
+                <button onclick="addAbility()" class="theme-btn px-4 py-1.5 rounded-full text-xs shadow-sm">+ 추가</button>
+            </div>
+            <div class="space-y-3" id="abilityContainer">
+                <!-- Javascript will populate abilities -->
+            </div>
+        </div>
+
+        <!-- Section 4: 챗 팔레트 -->
+        <div class="theme-card flex flex-col">
+            <h2 class="font-bold mb-3 text-lg flex items-center gap-2" style="color: var(--color-primary);">❖ 챗 팔레트 미리보기</h2>
+            <textarea id="chatPalettePreview" class="theme-input w-full font-mono text-[11px] leading-relaxed resize-y opacity-90 min-h-[350px]" rows="18" readonly></textarea>
+            
+            <div class="mt-4">
+                <label class="font-bold opacity-80 block mb-1">추가 매크로 (선택)</label>
+                <textarea id="customPalette" class="theme-input w-full text-xs" rows="3" placeholder="추가할 매크로나 대사를 적어주세요."></textarea>
+            </div>
+        </div>
+
+        <!-- Sticky Bottom Bar -->
+        <div class="fixed bottom-0 left-0 right-0 p-4 flex justify-center z-50 pointer-events-none">
+            <div class="max-w-5xl w-full flex justify-end gap-3 pointer-events-auto">
+                <div id="toastMessage" class="hidden items-center text-[11px] px-4 py-2 rounded-full font-bold shadow border" style="background-color: var(--bg-card); color: var(--color-primary); border-color: var(--color-primary);">
+                    ✓ 복사 성공! 코코포리아 방에 붙여넣으세요.
+                </div>
+                <button onclick="generateAndCopy()" class="theme-btn py-3 px-8 rounded-full shadow-lg text-sm flex items-center gap-2">
+                    📋 클립보드에 복사하기
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const categories = ['폭력', '정서', '지각', '기술', '지식', '괴이'];
+        const skillNames = [
+            ['소각', '연심', '고통', '분해', '물리학', '시간'],
+            ['고문', '기쁨', '관능', '전자기기', '수학', '혼돈'],
+            ['포박', '걱정', '촉감', '정리', '화학', '심해'],
+            ['협박', '부끄러움', '냄새', '약품', '생물학', '죽음'],
+            ['파괴', '웃음', '맛', '효율', '의학', '영혼'],
+            ['구타', '인내', '소리', '미디어', '교양', '마술'],
+            ['절단', '놀람', '풍경', '카메라', '인류학', '암흑'],
+            ['찌르기', '노여움', '추적', '탈것', '역사', '종말'],
+            ['사격', '원한', '예술', '기계', '민속학', '꿈'],
+            ['전쟁', '슬픔', '제육감', '함정', '고고학', '지저'],
+            ['매장', '친애', '그늘', '병기', '천문학', '우주']
+        ];
+
+        let selectedSkills = new Set();
+        let abilities = [
+            { id: 1, name: '기본공격', type: '공격', target: '자유', effect: '목표 1명을 선택해서 명중판정을 한다.\n성공하고, 목표가 회피에 실패하면 1D6점 대미지.' },
+            { id: 2, name: '전장이동', type: '서포트', target: '없음', effect: '지원행동. 이 어빌리티를 사용하면 전투에 참가한 캐릭터 전원은 다음 라운드의 [라운드 시작]에 플롯을 한다.' }
+        ];
+        let abilityCounter = 3;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Theme setup
+            const toggle = document.getElementById('themeToggle');
+            const html = document.documentElement;
+            
+            if (localStorage.kk_theme === 'dark') {
+                html.classList.add('dark');
+                toggle.textContent = '☀️ 라이트모드';
+            }
+
+            toggle.addEventListener('click', () => {
+                html.classList.toggle('dark');
+                if (html.classList.contains('dark')) {
+                    localStorage.kk_theme = 'dark';
+                    toggle.textContent = '☀️ 라이트모드';
+                } else {
+                    localStorage.kk_theme = 'light';
+                    toggle.textContent = '🌙 다크모드';
+                }
+            });
+
+            // Color toggle logic
+            const useDefault = document.getElementById('useDefaultColor');
+            const colorPicker = document.getElementById('charColor');
+            useDefault.addEventListener('change', (e) => {
+                colorPicker.disabled = e.target.checked;
+                updatePreview();
+            });
+
+            // Load Data & Initial Renders
+            loadData();
+            renderSkillTable();
+            renderAbilities();
+            updatePreview();
+
+            // Event listeners for auto-updates
+            document.querySelectorAll('input, textarea, select').forEach(el => {
+                el.addEventListener('input', updatePreview);
+                el.addEventListener('change', updatePreview);
+            });
+            document.getElementById('curiosity').addEventListener('change', () => {
+                renderSkillTable();
+                updatePreview();
+            });
+        });
+
+        function calculateDistance(col1, row1, col2, row2) {
+            const curiosity = parseInt(document.getElementById('curiosity').value);
+            const rowDiff = Math.abs(row1 - row2);
+            let colDiff = 0;
+            const startCol = Math.min(col1, col2);
+            const endCol = Math.max(col1, col2);
+
+            for (let c = startCol; c < endCol; c++) {
+                if (curiosity === c || curiosity === c + 1) {
+                    colDiff += 0;
+                } else {
+                    colDiff += 1;
+                }
+            }
+            return rowDiff + colDiff;
+        }
+
+        function getTargetNumber(col, row) {
+            if (selectedSkills.size === 0) return 5; 
+            let minDistance = 999;
+            selectedSkills.forEach(skillStr => {
+                const [sCol, sRow] = skillStr.split(',').map(Number);
+                const dist = calculateDistance(sCol, sRow, col, row);
+                if (dist < minDistance) minDistance = dist;
+            });
+            return 5 + minDistance;
+        }
+
+        function renderSkillTable() {
+            const container = document.getElementById('skillTableContainer');
+            container.innerHTML = '';
+            const curiosity = parseInt(document.getElementById('curiosity').value);
+
+            for (let c = 1; c <= 6; c++) {
+                const colDiv = document.createElement('div');
+                colDiv.className = 'flex flex-col gap-1 flex-1';
+                
+                const header = document.createElement('div');
+                header.className = 'text-center font-bold pb-2 text-xs opacity-80';
+                header.textContent = `${c} ${categories[c-1]}`;
+                colDiv.appendChild(header);
+
+                for (let r = 2; r <= 12; r++) {
+                    const skillName = skillNames[r-2][c-1];
+                    const skillId = `${c},${r}`;
+                    const targetNum = getTargetNumber(c, r);
+
+                    const btn = document.createElement('div');
+                    btn.className = `skill-item rounded px-2 py-1.5 flex justify-between items-center select-none`;
+                    if (selectedSkills.has(skillId)) btn.classList.add('checked');
+                    
+                    btn.innerHTML = `<span>${skillName}</span> <span class="text-[10px] ${selectedSkills.has(skillId) ? '' : 'opacity-60'}">${targetNum}</span>`;
+                    
+                    btn.onclick = () => {
+                        if (selectedSkills.has(skillId)) selectedSkills.delete(skillId);
+                        else selectedSkills.add(skillId);
+                        renderSkillTable(); 
+                        updatePreview();
+                    };
+                    colDiv.appendChild(btn);
+                }
+                container.appendChild(colDiv);
+
+                // 틈새 선
+                if (c < 6) {
+                    const gap = document.createElement('div');
+                    gap.className = 'gap-line mt-6 flex-shrink-0';
+                    if (curiosity === c || curiosity === c + 1) gap.classList.add('active');
+                    container.appendChild(gap);
+                }
+            }
+        }
+
+        function renderAbilities() {
+            const container = document.getElementById('abilityContainer');
+            container.innerHTML = '';
+            
+            abilities.forEach(ab => {
+                const div = document.createElement('div');
+                div.className = "flex flex-col md:flex-row gap-3 items-start relative group theme-input";
+                div.innerHTML = `
+                    <button onclick="removeAbility(${ab.id})" class="absolute top-2 right-2 opacity-50 hover:opacity-100 transition-opacity font-bold cursor-pointer" title="삭제" style="color: var(--color-primary);">✕</button>
+                    
+                    <div class="w-full md:w-48 flex flex-col gap-2">
+                        <input type="text" value="${ab.name}" placeholder="어빌리티명" oninput="updateAbility(${ab.id}, 'name', this.value)" class="w-full bg-transparent border-b outline-none font-bold text-sm" style="border-color: var(--border-input);">
+                        <div class="flex gap-2">
+                            <select onchange="updateAbility(${ab.id}, 'type', this.value)" class="w-1/2 bg-transparent border-b outline-none text-xs pb-1" style="border-color: var(--border-input);">
+                                <option value="공격" ${ab.type === '공격' ? 'selected' : ''}>공격</option>
+                                <option value="서포트" ${ab.type === '서포트' ? 'selected' : ''}>서포트</option>
+                                <option value="장비" ${ab.type === '장비' ? 'selected' : ''}>장비</option>
+                            </select>
+                            <input type="text" value="${ab.target}" placeholder="지정특기" oninput="updateAbility(${ab.id}, 'target', this.value)" class="w-1/2 bg-transparent border-b outline-none text-xs pb-1" style="border-color: var(--border-input);">
+                        </div>
+                    </div>
+                    
+                    <div class="flex-grow w-full h-full">
+                        <textarea placeholder="효과를 입력하세요" oninput="updateAbility(${ab.id}, 'effect', this.value)" class="w-full h-full min-h-[50px] bg-transparent outline-none resize-none text-xs">${ab.effect}</textarea>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function addAbility() {
+            abilities.push({ id: abilityCounter++, name: '', type: '공격', target: '', effect: '' });
+            renderAbilities();
+            updatePreview();
+        }
+
+        function removeAbility(id) {
+            abilities = abilities.filter(a => a.id !== id);
+            renderAbilities();
+            updatePreview();
+        }
+
+        function updateAbility(id, field, value) {
+            const ab = abilities.find(a => a.id === id);
+            if(ab) {
+                ab[field] = value;
+                updatePreview();
+            }
+        }
+
+        function generateChatPalette() {
+            let text = '';
+            
+            const fear = document.getElementById('fear').value.trim();
+            if (fear) text += `★공포심: ${fear}\n\n`;
+
+            if (abilities.length > 0) {
+                text += `// --- 어빌리티 ---\n`;
+                abilities.forEach(ab => {
+                    const name = ab.name || '이름없음';
+                    const target = ab.target ? `《${ab.target}》` : '';
+                    const effect = ab.effect.replace(/\n/g, ' '); 
+                    text += `[${name}] ${target} : ${effect}\n`;
+                });
+                text += `\n`;
+            }
+
+            text += `// --- 특기 판정 ---\n`;
+            for (let c = 1; c <= 6; c++) {
+                for (let r = 2; r <= 12; r++) {
+                    const skillName = skillNames[r-2][c-1];
+                    const targetNum = getTargetNumber(c, r);
+                    text += `2D6>=${targetNum} 【${skillName}】\n`;
+                }
+            }
+
+            text += `\n// --- 랜덤표 ---\n`;
+            text += `FT　　감정표\nRTT　 랜덤 특기 결정표\nTVT　 지정특기(폭력)표\nTET　 지정특기(정서)표\nTPT　 지정특기(지각)표\nTST　 지정특기(기술)표\nTKT　 지정특기(지식)표\nTMT　 지정특기(괴이)표\n`;
+
+            return text;
+        }
+
+        function updatePreview() {
+            const preview = document.getElementById('chatPalettePreview');
+            preview.value = generateChatPalette();
+            saveData();
+        }
+
+        function saveData() {
+            const data = {
+                name: document.getElementById('charName').value,
+                color: document.getElementById('charColor').value,
+                useDefaultColor: document.getElementById('useDefaultColor').checked,
+                hpCur: document.getElementById('hpCurrent').value,
+                hpMax: document.getElementById('hpMax').value,
+                sanCur: document.getElementById('sanCurrent').value,
+                sanMax: document.getElementById('sanMax').value,
+                itemPain: document.getElementById('itemPainkiller').value,
+                itemWeap: document.getElementById('itemWeapon').value,
+                itemAmul: document.getElementById('itemAmulet').value,
+                curiosity: document.getElementById('curiosity').value,
+                fear: document.getElementById('fear').value,
+                memo: document.getElementById('charMemo').value,
+                customPalette: document.getElementById('customPalette').value,
+                selectedSkills: Array.from(selectedSkills),
+                abilities: abilities
+            };
+            localStorage.setItem('kk_insane_maker', JSON.stringify(data));
+        }
+
+        function loadData() {
+            const saved = localStorage.getItem('kk_insane_maker');
+            if(saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    if(data.name !== undefined) document.getElementById('charName').value = data.name;
+                    if(data.color !== undefined) document.getElementById('charColor').value = data.color;
+                    if(data.useDefaultColor !== undefined) {
+                        document.getElementById('useDefaultColor').checked = data.useDefaultColor;
+                        document.getElementById('charColor').disabled = data.useDefaultColor;
+                    }
+                    if(data.hpCur !== undefined) document.getElementById('hpCurrent').value = data.hpCur;
+                    if(data.hpMax !== undefined) document.getElementById('hpMax').value = data.hpMax;
+                    if(data.sanCur !== undefined) document.getElementById('sanCurrent').value = data.sanCur;
+                    if(data.sanMax !== undefined) document.getElementById('sanMax').value = data.sanMax;
+                    if(data.itemPain !== undefined) document.getElementById('itemPainkiller').value = data.itemPain;
+                    if(data.itemWeap !== undefined) document.getElementById('itemWeapon').value = data.itemWeap;
+                    if(data.itemAmul !== undefined) document.getElementById('itemAmulet').value = data.itemAmul;
+                    if(data.curiosity !== undefined) document.getElementById('curiosity').value = data.curiosity;
+                    if(data.fear !== undefined) document.getElementById('fear').value = data.fear;
+                    if(data.memo !== undefined) document.getElementById('charMemo').value = data.memo;
+                    if(data.customPalette !== undefined) document.getElementById('customPalette').value = data.customPalette;
+                    
+                    if(data.selectedSkills) selectedSkills = new Set(data.selectedSkills);
+                    if(data.abilities && data.abilities.length > 0) {
+                        abilities = data.abilities;
+                        abilityCounter = Math.max(...abilities.map(a => a.id)) + 1;
+                    }
+                } catch(e) { console.error("데이터 로드 오류", e); }
+            }
+        }
+
+        function generateAndCopy() {
+            let name = document.getElementById('charName').value.trim() || '봉마인';
+            const useDefaultColor = document.getElementById('useDefaultColor').checked;
+            const color = useDefaultColor ? "" : document.getElementById('charColor').value;
+            
+            const hpCur = parseInt(document.getElementById('hpCurrent').value) || 0;
+            const hpMax = parseInt(document.getElementById('hpMax').value) || 6;
+            const sanCur = parseInt(document.getElementById('sanCurrent').value) || 0;
+            const sanMax = parseInt(document.getElementById('sanMax').value) || 6;
+
+            const itemPain = parseInt(document.getElementById('itemPainkiller').value) || 0;
+            const itemWeap = parseInt(document.getElementById('itemWeapon').value) || 0;
+            const itemAmul = parseInt(document.getElementById('itemAmulet').value) || 0;
+
+            const memo = document.getElementById('charMemo').value; // 아무것도 안 붙인 순수 메모
+            
+            const generatedCmd = generateChatPalette();
+            const customCmd = document.getElementById('customPalette').value.trim();
+            const finalCommands = customCmd ? `${generatedCmd}\n// --- 추가 매크로 ---\n${customCmd}` : generatedCmd;
+
+            const ccfolioData = {
+                "kind": "character",
+                "data": {
+                    "name": name,
+                    "memo": memo,
+                    "initiative": 0,
+                    "externalUrl": "",
+                    "status": [
+                        { "label": "생명력", "value": hpCur, "max": hpMax },
+                        { "label": "이성치", "value": sanCur, "max": sanMax }
+                    ],
+                    "params": [
+                        { "label": "진통제", "value": itemPain },
+                        { "label": "무기", "value": itemWeap },
+                        { "label": "부적", "value": itemAmul }
+                    ],
+                    "faces": [],
+                    "commands": finalCommands,
+                    "color": color,
+                    "secret": false,
+                    "invisible": false,
+                    "hideStatus": false
+                }
+            };
+
+            const tempTextArea = document.createElement("textarea");
+            tempTextArea.value = JSON.stringify(ccfolioData);
+            tempTextArea.style.position = "fixed";
+            tempTextArea.style.opacity = "0";
+            document.body.appendChild(tempTextArea);
+            tempTextArea.select();
+
+            try {
+                document.execCommand('copy');
+                const toast = document.getElementById('toastMessage');
+                toast.classList.remove('hidden');
+                toast.classList.add('flex');
+                setTimeout(() => {
+                    toast.classList.add('hidden');
+                    toast.classList.remove('flex');
+                }, 3000);
+            } catch (err) {
+                alert('복사에 실패했습니다.');
+            } finally {
+                document.body.removeChild(tempTextArea);
+            }
+        }
+    </script>
+</body>
+</html>
