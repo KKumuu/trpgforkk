@@ -1,0 +1,1398 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APNG FX Studio Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pako@2.0.4/dist/pako.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/upng-js@2.1.0/UPNG.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        editor: {
+                            bg: '#0a0a0a',       
+                            panel: '#171717',    
+                            border: '#262626',   
+                            hover: '#333333',    
+                            active: '#8b5cf6',   
+                            text: '#e5e5e5',     
+                            muted: '#737373'     
+                        }
+                    },
+                    fontFamily: { sans: ['Inter', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@400;700;900&family=Jua&family=Black+Han+Sans&family=Noto+Sans+JP:wght@400;700;900&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; background-color: #0a0a0a; color: #e5e5e5; margin: 0; height: 100vh; overflow: hidden; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #404040; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #525252; }
+
+        /* Hide number input spinners (up/down arrows) */
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type="number"] { -moz-appearance: textfield; }
+
+        /* Range Sliders */
+        input[type=range] { -webkit-appearance: none; background: transparent; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; background: #262626; border-radius: 3px; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 14px; width: 14px; border-radius: 50%; background: #8b5cf6; cursor: pointer; margin-top: -4px; transition: transform 0.1s; }
+        input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+        
+        /* Color Pickers */
+        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        input[type="color"]::-webkit-color-swatch { border: 1px solid #404040; border-radius: 4px; }
+        
+        /* Panel Elements */
+        .panel-header { font-size: 0.75rem; font-weight: 800; letter-spacing: 0.05em; color: #a3a3a3; padding: 0.75rem 1rem; border-bottom: 1px solid #262626; background: #171717; position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between;}
+        .input-group { margin-bottom: 0.75rem; }
+        .input-group label { display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; color: #d4d4d4; margin-bottom: 0.375rem; font-weight: 600; }
+        .input-field { background: #0a0a0a; border: 1px solid #404040; color: #fff; padding: 0.375rem 0.5rem; border-radius: 0.375rem; font-size: 0.75rem; width: 100%; outline: none; transition: border-color 0.2s; }
+        .input-field:focus { border-color: #8b5cf6; }
+
+        /* Backgrounds */
+        .workspace-bg {
+            background-color: #0a0a0a;
+            background-image: linear-gradient(#171717 1px, transparent 1px), linear-gradient(90deg, #171717 1px, transparent 1px);
+            background-size: 40px 40px; background-position: center center;
+        }
+        .checkerboard {
+            background-image: linear-gradient(45deg, #1f1f1f 25%, transparent 25%, transparent 75%, #1f1f1f 75%, #1f1f1f), 
+                              linear-gradient(45deg, #1f1f1f 25%, transparent 25%, transparent 75%, #1f1f1f 75%, #1f1f1f);
+            background-size: 20px 20px; background-position: 0 0, 10px 10px; background-color: #141414;
+        }
+
+        /* Lists & Buttons */
+        .layer-item.active { background-color: #262626; border-color: #8b5cf6; }
+        .layer-item.drag-over { border-top: 2px solid #8b5cf6; padding-top: 10px; }
+        
+        .effect-btn { padding: 0.375rem 0.25rem; font-size: 0.7rem; border-radius: 0.375rem; border: 1px solid #262626; background: #171717; color: #a3a3a3; transition: all 0.2s; font-weight: 600; text-align: center; }
+        .effect-btn:hover { background: #262626; color: #fff; transform: translateY(-1px); }
+        .effect-btn.active { border-color: #8b5cf6; background: rgba(139, 92, 246, 0.1); color: #c4b5fd; box-shadow: 0 0 10px rgba(139,92,246,0.2); }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .toast { animation: fadeIn 0.3s ease-out forwards; }
+    </style>
+</head>
+<body class="flex flex-col h-screen text-sm select-none">
+    
+    <!-- Fullscreen Drop Overlay -->
+    <div id="dropOverlay" class="fixed inset-0 bg-editor-bg/90 backdrop-blur-sm z-[100] hidden flex-col items-center justify-center border-4 border-dashed border-purple-500 m-4 rounded-3xl pointer-events-none transition-all">
+        <div class="text-purple-400 text-6xl mb-4 animate-bounce">📥</div>
+        <div class="text-white text-2xl font-extrabold tracking-wide">이미지를 이곳에 드롭하여 추가하세요</div>
+    </div>
+
+    <header class="h-14 bg-editor-panel border-b border-editor-border flex items-center justify-between px-6 shrink-0 z-20 shadow-md">
+        <div class="flex items-center gap-4">
+            <h1 class="font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500 tracking-tight text-lg flex items-center gap-2">
+                <svg class="w-5 h-5 text-purple-500" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5"/></svg>
+                APNG FX STUDIO PRO
+            </h1>
+        </div>
+        <div class="flex items-center gap-2">
+            <select id="exportFormat" class="bg-editor-bg border border-editor-border text-white text-xs font-bold px-3 py-2 rounded-lg outline-none cursor-pointer hover:bg-editor-hover transition">
+                <option value="apng">APNG 저장</option>
+                <option value="gif">GIF 저장</option>
+            </select>
+            <button id="exportBtn" class="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white px-5 py-2 rounded-lg text-xs font-bold shadow-lg shadow-purple-500/30 transition active:scale-95 flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                렌더링 및 다운로드
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 flex overflow-hidden">
+        
+        <aside class="w-72 bg-editor-panel border-r border-editor-border flex flex-col shrink-0 z-10 shadow-xl">
+            <!-- Global Config -->
+            <div class="border-b border-editor-border pb-2 bg-editor-bg/50">
+                <div class="panel-header">
+                    <span>🎬 프로젝트 전체 설정</span>
+                </div>
+                <div class="px-4 pt-4 space-y-4">
+                    <div class="grid grid-cols-2 gap-3 mb-1">
+                        <div class="input-group !mb-0">
+                            <label>캔버스 가로</label>
+                            <input type="number" id="globalW" value="600" min="10" max="2000" class="input-field text-center font-mono font-bold text-purple-300">
+                        </div>
+                        <div class="input-group !mb-0">
+                            <label>캔버스 세로</label>
+                            <input type="number" id="globalH" value="600" min="10" max="2000" class="input-field text-center font-mono font-bold text-purple-300">
+                        </div>
+                    </div>
+                    <!-- Fit to Canvas Button -->
+                    <button id="fitCanvasBtn" class="w-full bg-editor-panel hover:bg-purple-900/40 border border-editor-border hover:border-purple-500/50 text-editor-text hover:text-purple-300 text-xs py-1.5 rounded transition flex items-center justify-center gap-2 mb-2">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
+                        선택 레이어 크기에 맞추기
+                    </button>
+
+                    <div class="input-group">
+                        <label><span>총 프레임 수 (길이)</span> <span id="gFrameVal" class="text-pink-400 font-bold">12</span></label>
+                        <input type="range" id="globalFrames" min="2" max="60" value="12" class="w-full">
+                    </div>
+                    <div class="input-group">
+                        <label><span>프레임 딜레이 (속도)</span> <span id="gDelayVal" class="text-pink-400 font-bold">80ms</span></label>
+                        <input type="range" id="globalDelay" min="20" max="300" step="10" value="80" class="w-full">
+                    </div>
+                    <label class="flex items-center gap-2 cursor-pointer text-xs text-editor-text mb-2">
+                        <input type="checkbox" id="globalLoop" checked class="accent-purple-500 rounded">
+                        무한 반복 (Loop)
+                    </label>
+                </div>
+            </div>
+
+            <!-- Output Info & Estimation -->
+            <div class="border-b border-editor-border p-4 bg-editor-bg/30">
+                <h3 class="text-[10px] font-bold text-editor-muted mb-3 flex items-center justify-between">
+                    <span>📊 출력 정보 (ESTIMATION)</span>
+                    <button id="calcSizeBtn" class="text-purple-400 hover:text-purple-300 bg-purple-900/30 px-2 py-1 rounded border border-purple-500/30 transition">용량 계산</button>
+                </h3>
+                <div class="space-y-2 text-xs">
+                    <div class="flex justify-between">
+                        <span class="text-editor-muted">해상도</span>
+                        <span id="infoResDisplay" class="text-white font-mono">600x600</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-editor-muted">예상 용량</span>
+                        <div class="flex items-center gap-2">
+                            <span id="infoSizeCalcInd" class="text-purple-400 animate-pulse hidden text-[10px]">계산 중...</span>
+                            <span id="infoSizeVal" class="text-pink-400 font-bold font-mono">-</span>
+                        </div>
+                    </div>
+                    <div id="infoSizeWarn" class="mt-2 bg-rose-900/20 border border-rose-700/50 rounded p-2 text-[10px] text-rose-300 hidden">
+                        ⚠️ 용량이 5MB를 초과할 수 있습니다. 캔버스 크기나 프레임 수를 줄여보세요.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Layer List -->
+            <div class="flex-1 flex flex-col overflow-hidden bg-editor-panel">
+                <div class="panel-header">
+                    <span>🗂️ 레이어 (Z-Index)</span>
+                    <div class="flex gap-2">
+                        <button id="addTextBtn" class="text-purple-400 hover:text-purple-300 bg-purple-900/30 px-2 py-1 rounded border border-purple-500/30 text-[10px] flex items-center gap-1 transition" title="텍스트 추가">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12h18M3 6h18M3 18h18"/></svg> 텍스트
+                        </button>
+                        <label class="cursor-pointer text-pink-400 hover:text-pink-300 bg-pink-900/30 px-2 py-1 rounded border border-pink-500/30 text-[10px] flex items-center gap-1 transition" title="이미지 추가">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg> 이미지
+                            <input type="file" id="layerUpload" class="hidden" accept="image/png, image/jpeg, image/webp" multiple>
+                        </label>
+                    </div>
+                </div>
+                <div id="layerList" class="flex-1 overflow-y-auto p-3 space-y-2">
+                    <div id="emptyLayerMsg" class="h-full flex flex-col items-center justify-center text-editor-muted text-xs text-center p-4">
+                        <div class="w-12 h-12 border-2 border-dashed border-editor-border rounded-lg flex items-center justify-center mb-3">
+                            <svg class="w-6 h-6 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        </div>
+                        이미지를 드래그 앤 드롭<br>또는 버튼을 눌러 추가하세요.
+                    </div>
+                </div>
+                <div class="text-[10px] text-editor-muted text-center py-2 border-t border-editor-border bg-editor-bg">
+                    💡 레이어를 상하로 드래그하여 순서를 변경하세요.
+                </div>
+            </div>
+        </aside>
+
+        <section class="flex-1 workspace-bg relative flex items-center justify-center overflow-hidden" id="workspaceArea">
+            <div class="absolute top-4 left-4 bg-editor-bg/80 backdrop-blur-md border border-editor-border px-3 py-2 rounded-lg flex items-center gap-3 z-10 shadow-xl">
+                <div class="text-xs font-bold text-white"><span id="canvasResDisplay" class="font-mono text-purple-400">600x600</span></div>
+                <div class="h-4 w-px bg-editor-border"></div>
+                <div class="text-[11px] text-editor-muted flex items-center gap-1">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg>
+                    직접 클릭하여 이동/크기/회전 (방향키 이동 지원)
+                </div>
+            </div>
+
+            <!-- Calculation Indicator -->
+            <div id="cacheIndicator" class="absolute top-4 right-4 bg-purple-900/90 backdrop-blur border border-purple-500 text-purple-100 px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 z-10 shadow-lg shadow-purple-900/50 hidden">
+                <svg class="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                프레임 캐싱 중...
+            </div>
+
+            <!-- Canvas Wrapper for visual scaling -->
+            <div id="canvasWrapper" class="relative shadow-[0_0_50px_rgba(0,0,0,0.8)] transition-transform duration-75 ease-out">
+                <canvas id="previewCanvas" class="checkerboard block outline-none border border-editor-border/50"></canvas>
+                
+                <!-- DOM Gizmo (Overlays Canvas and allows out-of-bounds editing) -->
+                <div id="gizmo" class="absolute top-0 left-0 hidden pointer-events-none z-20">
+                    <div class="relative w-full h-full border-2 border-purple-500 shadow-[0_0_10px_rgba(139,92,246,0.3)] box-border">
+                        <!-- Hitbox for dragging -->
+                        <div id="gizmoDrag" class="absolute inset-0 cursor-move pointer-events-auto"></div>
+                        
+                        <!-- Handles -->
+                        <div class="gizmo-handle absolute -top-1.5 -left-1.5 w-3 h-3 bg-white border border-purple-500 pointer-events-auto cursor-nwse-resize shadow-md" data-action="scale-tl"></div>
+                        <div class="gizmo-handle absolute -top-1.5 -right-1.5 w-3 h-3 bg-white border border-purple-500 pointer-events-auto cursor-nesw-resize shadow-md" data-action="scale-tr"></div>
+                        <div class="gizmo-handle absolute -bottom-1.5 -left-1.5 w-3 h-3 bg-white border border-purple-500 pointer-events-auto cursor-nesw-resize shadow-md" data-action="scale-bl"></div>
+                        <div class="gizmo-handle absolute -bottom-1.5 -right-1.5 w-3 h-3 bg-white border border-purple-500 pointer-events-auto cursor-nwse-resize shadow-md" data-action="scale-br"></div>
+                        
+                        <!-- Rotation Handle -->
+                        <div class="absolute -top-10 left-1/2 -translate-x-1/2 w-px h-10 bg-purple-500"></div>
+                        <div class="gizmo-handle absolute -top-11 left-1/2 -translate-x-1/2 w-4 h-4 bg-white border-2 border-purple-500 rounded-full pointer-events-auto cursor-crosshair shadow-md" data-action="rotate"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <aside class="w-[340px] bg-editor-panel border-l border-editor-border flex flex-col shrink-0 z-10 overflow-y-auto shadow-xl custom-scrollbar">
+            
+            <div id="noLayerProps" class="h-full flex flex-col items-center justify-center text-editor-muted text-xs p-8 text-center space-y-4">
+                <svg class="w-12 h-12 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg>
+                <p>레이어를 선택하면<br>상세 편집 도구가 나타납니다.</p>
+            </div>
+
+            <div id="layerProps" class="hidden flex-col pb-10">
+                <div class="panel-header bg-gradient-to-r from-purple-900/20 to-transparent border-b border-purple-500/30">
+                    <div class="flex items-center gap-2 overflow-hidden w-full">
+                        <span id="propLayerTypeIcon" class="text-purple-400 shrink-0">🖼️</span>
+                        <input type="text" id="propLayerName" class="bg-transparent text-white font-bold text-sm w-full outline-none truncate border-b border-transparent focus:border-purple-500 transition" value="Layer Name">
+                    </div>
+                </div>
+
+                <!-- Text Settings -->
+                <div id="propTextSection" class="p-4 border-b border-editor-border space-y-3 bg-editor-bg hidden">
+                    <h3 class="text-[10px] font-bold text-purple-400 mb-2 flex justify-between items-center">
+                        TYPOGRAPHY
+                        <span class="text-editor-muted font-normal text-[9px]">폰트 및 외곽선</span>
+                    </h3>
+                    <div class="input-group">
+                        <input type="text" id="propTextContent" class="input-field font-bold text-base" placeholder="텍스트 입력">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="relative w-full">
+                            <input type="text" id="propTextFont" list="fontOptions" class="input-field cursor-pointer w-full text-xs" placeholder="폰트 직접 입력" value="Inter" title="컴퓨터에 설치된 폰트명을 직접 타이핑하면 적용됩니다.">
+                            <datalist id="fontOptions">
+                                <optgroup label="한국어 (Korean)">
+                                    <option value="Inter">Inter (기본/영어 공용)</option>
+                                    <option value="'Noto Sans KR'">Noto Sans KR (한국어)</option>
+                                    <option value="'Black Han Sans'">Black Han Sans (한국어)</option>
+                                    <option value="'Jua'">Jua (한국어)</option>
+                                    <option value="'Malgun Gothic'">맑은 고딕 (한국어)</option>
+                                    <option value="'Gulim'">굴림 (한국어)</option>
+                                </optgroup>
+                                <optgroup label="영어 (English)">
+                                    <option value="Arial">Arial (영어)</option>
+                                    <option value="'Times New Roman'">Times New Roman (영어)</option>
+                                    <option value="'Courier New'">Courier New (영어)</option>
+                                    <option value="Impact">Impact (영어)</option>
+                                    <option value="'Comic Sans MS'">Comic Sans MS (영어)</option>
+                                </optgroup>
+                                <optgroup label="일본어 (Japanese)">
+                                    <option value="'Noto Sans JP'">Noto Sans JP (일본어)</option>
+                                    <option value="Meiryo">Meiryo (메이리오/일본어)</option>
+                                    <option value="'MS PGothic'">MS PGothic (일본어)</option>
+                                    <option value="'Yu Gothic'">Yu Gothic (일본어)</option>
+                                </optgroup>
+                            </datalist>
+                        </div>
+                        <div class="flex gap-2">
+                            <input type="color" id="propTextColor" class="w-full h-[30px] rounded cursor-pointer bg-transparent border-0 p-0" value="#ffffff">
+                            <button id="propTextBold" class="w-[30px] h-[30px] bg-editor-panel border border-editor-border rounded flex items-center justify-center font-bold hover:bg-editor-hover transition">B</button>
+                        </div>
+                    </div>
+                    <!-- Text Stroke -->
+                    <div class="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-editor-border/50">
+                        <label class="flex items-center gap-2 text-xs text-editor-muted cursor-pointer">
+                            <input type="checkbox" id="propTextStroke" class="accent-purple-500 rounded"> 테두리 (Stroke)
+                        </label>
+                        <div class="flex gap-2">
+                            <input type="color" id="propTextStrokeColor" class="w-[30px] h-[30px] rounded cursor-pointer bg-transparent border-0 p-0" value="#000000">
+                            <input type="number" id="propTextStrokeWidth" class="input-field w-full text-xs" value="4" min="1" max="20" title="테두리 두께">
+                        </div>
+                    </div>
+                    <!-- Text Typography Sizing -->
+                    <div class="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-editor-border/50">
+                        <div class="input-group mb-0 flex flex-col">
+                            <label class="!mb-1 text-xs">크기 
+                                <input type="number" id="propTextSizeNum" class="input-field w-12 p-0.5 text-right font-mono text-purple-300 bg-transparent border-none" value="80">
+                            </label>
+                            <input type="range" id="propTextSize" min="10" max="400" value="80" class="w-full">
+                        </div>
+                        <div class="input-group mb-0 flex flex-col">
+                            <label class="!mb-1 text-xs">자간 
+                                <input type="number" id="propTextSpaceNum" class="input-field w-10 p-0.5 text-right font-mono text-purple-300 bg-transparent border-none" value="0">
+                            </label>
+                            <input type="range" id="propTextSpace" min="-20" max="100" value="0" class="w-full">
+                        </div>
+                        <div class="input-group mb-0 flex flex-col">
+                            <label class="!mb-1 text-xs">장평 
+                                <div class="flex items-center"><input type="number" id="propTextStretchNum" class="input-field w-10 p-0.5 text-right font-mono text-purple-300 bg-transparent border-none" value="100"><span class="text-[10px]">%</span></div>
+                            </label>
+                            <input type="range" id="propTextStretch" min="50" max="200" value="100" class="w-full">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Transform & Alignment -->
+                <div class="p-4 border-b border-editor-border space-y-3">
+                    <h3 class="text-[10px] font-bold text-editor-muted mb-2 flex justify-between">
+                        변형 (TRANSFORM)
+                    </h3>
+                    
+                    <!-- Quick Align Tools -->
+                    <div class="flex gap-1 mb-2 p-1 bg-editor-bg rounded border border-editor-border">
+                        <button class="align-btn p-1.5 hover:bg-editor-hover rounded text-editor-muted hover:text-white transition flex-1 flex items-center justify-center" data-align="left" title="왼쪽 정렬">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V3"/><path d="M8 6v12h10V6z"/></svg>
+                        </button>
+                        <button class="align-btn p-1.5 hover:bg-editor-hover rounded text-editor-muted hover:text-white transition flex-1 flex items-center justify-center" data-align="center" title="가로 가운데 정렬">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V3"/><path d="M7 6v12h10V6z"/></svg>
+                        </button>
+                        <button class="align-btn p-1.5 hover:bg-editor-hover rounded text-editor-muted hover:text-white transition flex-1 flex items-center justify-center" data-align="right" title="오른쪽 정렬">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21V3"/><path d="M16 6v12H6V6z"/></svg>
+                        </button>
+                        <div class="w-px bg-editor-border mx-1"></div>
+                        <button class="align-btn p-1.5 hover:bg-editor-hover rounded text-editor-muted hover:text-white transition flex-1 flex items-center justify-center" data-align="top" title="위쪽 정렬">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h18"/><path d="M6 8h12v10H6z"/></svg>
+                        </button>
+                        <button class="align-btn p-1.5 hover:bg-editor-hover rounded text-editor-muted hover:text-white transition flex-1 flex items-center justify-center" data-align="middle" title="세로 가운데 정렬">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18"/><path d="M6 7h12v10H6z"/></svg>
+                        </button>
+                        <button class="align-btn p-1.5 hover:bg-editor-hover rounded text-editor-muted hover:text-white transition flex-1 flex items-center justify-center" data-align="bottom" title="아래쪽 정렬">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M6 16H18V6H6z"/></svg>
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="input-group">
+                            <label>X 위치</label>
+                            <div class="relative"><input type="number" id="propX" class="input-field pl-6 font-mono"><span class="absolute left-2 top-1/2 -translate-y-1/2 text-editor-muted text-xs">X</span></div>
+                        </div>
+                        <div class="input-group">
+                            <label>Y 위치</label>
+                            <div class="relative"><input type="number" id="propY" class="input-field pl-6 font-mono"><span class="absolute left-2 top-1/2 -translate-y-1/2 text-editor-muted text-xs">Y</span></div>
+                        </div>
+                    </div>
+                    <!-- Wrap scale to toggle visibility based on Layer Type -->
+                    <div class="input-group" id="propScaleWrapper">
+                        <label><span>전체 배율 (Scale)</span> <div class="flex items-center"><input type="number" id="propScaleNum" class="input-field w-16 p-1 text-right font-mono text-purple-300 bg-editor-bg border-none" value="100"><span class="text-editor-muted ml-1 text-xs">%</span></div></label>
+                        <input type="range" id="propScale" min="10" max="500" value="100" class="w-full mt-1">
+                    </div>
+                    <div class="input-group">
+                        <label><span>회전 (Rotation)</span> <div class="flex items-center"><input type="number" id="propRotNum" class="input-field w-16 p-1 text-right font-mono text-purple-300 bg-editor-bg border-none" value="0"><span class="text-editor-muted ml-1 text-xs">°</span></div></label>
+                        <input type="range" id="propRot" min="-180" max="180" value="0" class="w-full mt-1">
+                    </div>
+                </div>
+
+                <!-- Appearance -->
+                <div class="p-4 border-b border-editor-border space-y-3 bg-editor-bg/30">
+                    <h3 class="text-[10px] font-bold text-editor-muted mb-2">APPEARANCE</h3>
+                    <div class="input-group">
+                        <label><span>불투명도 (Opacity)</span> <div class="flex items-center"><input type="number" id="propOpacNum" class="input-field w-14 p-1 text-right font-mono text-emerald-300 bg-editor-bg border-none" value="100" min="0" max="100"><span class="text-editor-muted ml-1 text-xs">%</span></div></label>
+                        <input type="range" id="propOpac" min="0" max="100" value="100" class="w-full mt-1">
+                    </div>
+                    <div class="input-group">
+                        <label><span>색조 (Hue)</span> <div class="flex items-center"><input type="number" id="propHueNum" class="input-field w-14 p-1 text-right font-mono text-emerald-300 bg-editor-bg border-none" value="0" min="-180" max="180"><span class="text-editor-muted ml-1 text-xs">°</span></div></label>
+                        <input type="range" id="propHue" min="-180" max="180" value="0" class="w-full mt-1" style="background: linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);">
+                    </div>
+                    <div class="flex gap-3">
+                        <div class="input-group flex-1">
+                            <label>채도 <div class="flex items-center"><input type="number" id="propSatNum" class="input-field w-10 p-1 text-right font-mono text-emerald-300 bg-editor-bg border-none" value="100" min="0" max="200"></div></label>
+                            <input type="range" id="propSat" min="0" max="200" value="100" class="w-full mt-1">
+                        </div>
+                        <div class="input-group flex-1">
+                            <label>밝기 <div class="flex items-center"><input type="number" id="propBriNum" class="input-field w-10 p-1 text-right font-mono text-emerald-300 bg-editor-bg border-none" value="100" min="0" max="200"></div></label>
+                            <input type="range" id="propBri" min="0" max="200" value="100" class="w-full mt-1">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Animation Effects (Extended Types) -->
+                <div class="p-4 border-b border-editor-border">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="text-[10px] font-bold text-pink-400">ANIMATION EFFECT</h3>
+                        <span id="activeEffectLabel" class="text-xs bg-editor-bg px-2 py-0.5 rounded border border-editor-border font-bold">none</span>
+                    </div>
+
+                    <!-- Category Filters -->
+                    <div class="flex gap-1 mb-3 overflow-x-auto pb-1" id="effectFilters">
+                        <button class="px-2 py-1 text-[10px] bg-purple-600 rounded text-white font-bold whitespace-nowrap transition" data-filter="all">전체</button>
+                        <button class="px-2 py-1 text-[10px] bg-editor-bg border border-editor-border rounded text-editor-muted hover:text-white whitespace-nowrap transition" data-filter="motion">모션</button>
+                        <button class="px-2 py-1 text-[10px] bg-editor-bg border border-editor-border rounded text-editor-muted hover:text-white whitespace-nowrap transition" data-filter="color">색상/왜곡</button>
+                        <button class="px-2 py-1 text-[10px] bg-editor-bg border border-editor-border rounded text-editor-muted hover:text-white whitespace-nowrap transition" data-filter="particle">파티클</button>
+                        <button class="px-2 py-1 text-[10px] bg-editor-bg border border-editor-border rounded text-editor-muted hover:text-white whitespace-nowrap transition" data-filter="transition">등장/퇴장</button>
+                    </div>
+                    
+                    <div class="grid grid-cols-3 gap-1.5 mb-4 max-h-56 overflow-y-auto pr-1">
+                        <button class="effect-btn active" data-effect="none" data-category="all">고정 (없음)</button>
+                        <!-- Motion -->
+                        <button class="effect-btn" data-effect="wobble" data-category="motion">물결 꿀렁</button>
+                        <button class="effect-btn" data-effect="float" data-category="motion">둥둥 (Float)</button>
+                        <button class="effect-btn" data-effect="pulse" data-category="motion">숨쉬기</button>
+                        <button class="effect-btn" data-effect="bounce" data-category="motion">바운스</button>
+                        <button class="effect-btn" data-effect="quake" data-category="motion">⚡ 지진</button>
+                        <button class="effect-btn" data-effect="shake" data-category="motion">👋 흔들흔들</button>
+                        <button class="effect-btn" data-effect="elastic" data-category="motion">🌟 탄성 띠용</button>
+                        <button class="effect-btn" data-effect="swing" data-category="motion"> pendulum 스윙</button>
+                        <button class="effect-btn" data-effect="heartbeat" data-category="motion">💓 심장박동</button>
+                        <button class="effect-btn" data-effect="tada" data-category="motion">🎉 짜잔(Tada)</button>
+                        <button class="effect-btn" data-effect="squeeze" data-category="motion">🤏 스퀴즈</button>
+                        <button class="effect-btn" data-effect="flip" data-category="motion">코인 플립</button>
+                        <button class="effect-btn" data-effect="spin" data-category="motion">빙글빙글</button>
+                        <!-- Color / Distortion -->
+                        <button class="effect-btn" data-effect="hue" data-category="color">무지개 (Hue)</button>
+                        <button class="effect-btn" data-effect="pixelate" data-category="color">레트로 픽셀</button>
+                        <button class="effect-btn" data-effect="rgb" data-category="color">🔴🔵 RGB 분리</button>
+                        <button class="effect-btn" data-effect="glitch" data-category="color">⚡ 글리치</button>
+                        <button class="effect-btn" data-effect="blur" data-category="color">🌫️ 블러(Blur)</button>
+                        <button class="effect-btn" data-effect="flicker" data-category="color">💡 깜빡임</button>
+                        <!-- Particle -->
+                        <button class="effect-btn text-yellow-300 border-yellow-900/50" data-effect="stardust" data-category="particle">🌟 별조각</button>
+                        <button class="effect-btn text-cyan-300 border-cyan-900/50" data-effect="bubbles" data-category="particle">🫧 비눗방울</button>
+                        <button class="effect-btn text-amber-400 border-amber-900/50" data-effect="glow" data-category="particle">✨ 광채</button>
+                        <button class="effect-btn text-pink-400 border-pink-900/50" data-effect="hearts" data-category="particle">💕 하트 뿅</button>
+                        <!-- Transitions -->
+                        <button class="effect-btn" data-effect="drop" data-category="transition">⬇️ 쿵 (Drop)</button>
+                        <button class="effect-btn" data-effect="pop" data-category="transition">💥 팝업 (Pop)</button>
+                        <button class="effect-btn" data-effect="slideX" data-category="transition">➡️ 가로등장</button>
+                        <button class="effect-btn" data-effect="slideY" data-category="transition">⬆️ 세로등장</button>
+                        <button class="effect-btn" data-effect="wipe" data-category="transition">🧹 와이프</button>
+                        <button class="effect-btn" data-effect="fadeOut" data-category="transition">👻 페이드아웃</button>
+                    </div>
+
+                    <div class="input-group">
+                        <label><span>효과 강도 (Intensity)</span> <div class="flex items-center"><input type="number" id="propIntNum" class="input-field w-12 p-1 text-right font-mono text-pink-400 bg-editor-bg border-none font-bold" value="5" min="1" max="30"></div></label>
+                        <input type="range" id="propInt" min="1" max="30" value="5" class="w-full mt-1">
+                    </div>
+
+                    <!-- Specific Panels -->
+                    <div id="propStardustPanel" class="hidden mt-3 p-3 bg-yellow-900/20 border border-yellow-700/50 rounded-lg">
+                        <label class="block text-[10px] font-bold text-yellow-400 mb-2">🌟 별조각 세부 설정</label>
+                        <div class="text-xs text-yellow-200/70 mb-2">별 색상 <input type="color" id="propStarColor" class="w-full h-6 mt-1 rounded cursor-pointer bg-transparent border-0 p-0" value="#ffd700"></div>
+                        <label class="flex justify-between text-[10px] text-yellow-200/70 mb-1">별 개수 <span id="propStarCountVal">20</span></label>
+                        <input type="range" id="propStarCount" min="1" max="50" value="20" class="w-full">
+                    </div>
+
+                    <div id="propBubblesPanel" class="hidden mt-3 p-3 bg-cyan-900/20 border border-cyan-700/50 rounded-lg">
+                        <label class="block text-[10px] font-bold text-cyan-400 mb-2">🫧 비눗방울 세부 설정</label>
+                        <div class="text-xs text-cyan-200/70 mb-2">방울 색상 <input type="color" id="propBubbleColor" class="w-full h-6 mt-1 rounded cursor-pointer bg-transparent border-0 p-0" value="#a8efff"></div>
+                        <label class="flex justify-between text-[10px] text-cyan-200/70 mb-1">방울 개수 <span id="propBubbleCountVal">15</span></label>
+                        <input type="range" id="propBubbleCount" min="1" max="50" value="15" class="w-full">
+                    </div>
+
+                    <div id="propGlowPanel" class="hidden mt-3 p-3 bg-amber-900/20 border border-amber-700/50 rounded-lg">
+                        <label class="block text-[10px] font-bold text-amber-400 mb-2">✨ 광채 세부 설정</label>
+                        <div class="flex gap-2 mb-2">
+                            <div class="flex-1 text-xs text-amber-200/70">광채 색상 <input type="color" id="propGlowColor" class="w-full h-6 mt-1 rounded cursor-pointer bg-transparent border-0 p-0"></div>
+                            <div class="flex-1 text-xs text-amber-200/70">반짝이 <input type="color" id="propSparkleColor" class="w-full h-6 mt-1 rounded cursor-pointer bg-transparent border-0 p-0"></div>
+                        </div>
+                        <label class="flex justify-between text-[10px] text-amber-200/70 mb-1">반짝이 수 <span id="propSparkleCountVal">12</span></label>
+                        <input type="range" id="propSparkleCount" min="0" max="40" value="12" class="w-full">
+                    </div>
+
+                    <div id="propHeartPanel" class="hidden mt-3 p-3 bg-pink-900/20 border border-pink-700/50 rounded-lg">
+                        <label class="block text-[10px] font-bold text-pink-400 mb-2">💕 하트 뿅뿅 세부 설정</label>
+                        <div class="text-xs text-pink-200/70 mb-2">하트 색상 <input type="color" id="propHeartColor" class="w-full h-6 mt-1 rounded cursor-pointer bg-transparent border-0 p-0"></div>
+                        <label class="flex justify-between text-[10px] text-pink-200/70 mb-1">하트 개수 <span id="propHeartCountVal">15</span></label>
+                        <input type="range" id="propHeartCount" min="1" max="50" value="15" class="w-full">
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <!-- Overlays & Toasts -->
+    <div id="exportOverlay" class="fixed inset-0 bg-black/90 backdrop-blur-md z-[200] hidden flex-col items-center justify-center">
+        <div class="w-72 bg-editor-panel border border-editor-border rounded-xl p-8 flex flex-col items-center shadow-2xl">
+            <div class="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-purple-500 mb-4"></div>
+            <h2 class="text-white font-extrabold text-lg mb-1 tracking-wider">이미지 렌더링 중...</h2>
+            <p class="text-editor-muted text-xs text-center leading-relaxed">선택된 설정과 프레임 수에 따라<br>몇 초 정도 소요될 수 있습니다.</p>
+            <div class="mt-4 w-full bg-editor-bg rounded-full h-1.5 overflow-hidden"><div class="bg-gradient-to-r from-purple-500 to-pink-500 h-full w-full animate-[pulse_1s_ease-in-out_infinite]"></div></div>
+        </div>
+    </div>
+    <div id="toastContainer" class="fixed bottom-6 right-1/2 translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <script>
+        const DOM = {
+            gW: document.getElementById('globalW'), gH: document.getElementById('globalH'),
+            fitCanvasBtn: document.getElementById('fitCanvasBtn'),
+            gF: document.getElementById('globalFrames'), gFVal: document.getElementById('gFrameVal'),
+            gD: document.getElementById('globalDelay'), gDVal: document.getElementById('gDelayVal'),
+            gLoop: document.getElementById('globalLoop'),
+            
+            calcSizeBtn: document.getElementById('calcSizeBtn'),
+            infoResDisplay: document.getElementById('infoResDisplay'),
+            sizeCalcInd: document.getElementById('infoSizeCalcInd'),
+            sizeVal: document.getElementById('infoSizeVal'),
+            sizeWarn: document.getElementById('infoSizeWarn'),
+            
+            lUpload: document.getElementById('layerUpload'), addTextBtn: document.getElementById('addTextBtn'),
+            lList: document.getElementById('layerList'), emptyMsg: document.getElementById('emptyLayerMsg'),
+            
+            wrap: document.getElementById('canvasWrapper'), canvas: document.getElementById('previewCanvas'),
+            gizmo: document.getElementById('gizmo'), gizmoDrag: document.getElementById('gizmoDrag'),
+            cacheInd: document.getElementById('cacheIndicator'), resDisp: document.getElementById('canvasResDisplay'),
+            workspace: document.getElementById('workspaceArea'), dropOverlay: document.getElementById('dropOverlay'),
+            
+            pPanel: document.getElementById('layerProps'), noProps: document.getElementById('noLayerProps'),
+            pTypeIcon: document.getElementById('propLayerTypeIcon'), pName: document.getElementById('propLayerName'),
+            pX: document.getElementById('propX'), pY: document.getElementById('propY'),
+            alignBtns: document.querySelectorAll('.align-btn'),
+            
+            pScaleWrap: document.getElementById('propScaleWrapper'),
+            pScale: document.getElementById('propScale'), pScaleNum: document.getElementById('propScaleNum'),
+            pRot: document.getElementById('propRot'), pRotNum: document.getElementById('propRotNum'),
+            
+            // Appearance Inputs
+            pOpac: document.getElementById('propOpac'), pOpacNum: document.getElementById('propOpacNum'),
+            pHue: document.getElementById('propHue'), pHueNum: document.getElementById('propHueNum'),
+            pSat: document.getElementById('propSat'), pSatNum: document.getElementById('propSatNum'),
+            pBri: document.getElementById('propBri'), pBriNum: document.getElementById('propBriNum'),
+            
+            pInt: document.getElementById('propInt'), pIntNum: document.getElementById('propIntNum'),
+            effectBtns: document.querySelectorAll('.effect-btn'), eLabel: document.getElementById('activeEffectLabel'),
+            effectFilters: document.querySelectorAll('#effectFilters button'),
+            
+            tSec: document.getElementById('propTextSection'), tContent: document.getElementById('propTextContent'),
+            tFont: document.getElementById('propTextFont'), tColor: document.getElementById('propTextColor'), tBold: document.getElementById('propTextBold'),
+            tStroke: document.getElementById('propTextStroke'), tStrokeColor: document.getElementById('propTextStrokeColor'), tStrokeWidth: document.getElementById('propTextStrokeWidth'),
+            
+            // Typography sizing
+            tSize: document.getElementById('propTextSize'), tSizeNum: document.getElementById('propTextSizeNum'),
+            tSpace: document.getElementById('propTextSpace'), tSpaceNum: document.getElementById('propTextSpaceNum'),
+            tStretch: document.getElementById('propTextStretch'), tStretchNum: document.getElementById('propTextStretchNum'),
+
+            // Specific Effects Panels
+            starPan: document.getElementById('propStardustPanel'), starColor: document.getElementById('propStarColor'), 
+            starCount: document.getElementById('propStarCount'), starCountVal: document.getElementById('propStarCountVal'),
+            
+            bubPan: document.getElementById('propBubblesPanel'), bubColor: document.getElementById('propBubbleColor'),
+            bubCount: document.getElementById('propBubbleCount'), bubCountVal: document.getElementById('propBubbleCountVal'),
+
+            glowPan: document.getElementById('propGlowPanel'), gColor: document.getElementById('propGlowColor'),
+            sColor: document.getElementById('propSparkleColor'), sCount: document.getElementById('propSparkleCount'), sCountVal: document.getElementById('propSparkleCountVal'),
+            
+            heartPan: document.getElementById('propHeartPanel'), hColor: document.getElementById('propHeartColor'),
+            hCount: document.getElementById('propHeartCount'), hCountVal: document.getElementById('propHeartCountVal'),
+            
+            exportFormat: document.getElementById('exportFormat'),
+            exportBtn: document.getElementById('exportBtn'), overlay: document.getElementById('exportOverlay')
+        };
+
+        const ctx = DOM.canvas.getContext('2d', { willReadFrequently: true });
+        
+        let layers = [];
+        let activeLayerId = null;
+        let animId = null;
+        let currentFrame = 0;
+        let lastTime = 0;
+        let cacheTimer = null;
+        let workspaceScale = 1;
+
+        let actionState = 'none'; 
+        let dragOffset = { x: 0, y: 0 };
+        let initialGizmoState = { scale: 100, textSize: 80, rot: 0, dist: 0, angle: 0, lx: 0, ly: 0 };
+
+        function showToast(msg, type='success') {
+            const t = document.createElement('div');
+            t.className = `toast px-4 py-3 rounded shadow-xl text-sm font-bold text-white flex items-center gap-2 ${type==='error' ? 'bg-rose-600 border border-rose-500' : 'bg-editor-panel border border-purple-500'}`;
+            t.innerHTML = `<span>${type==='error'?'⚠️':'✅'}</span> ${msg}`;
+            document.getElementById('toastContainer').appendChild(t);
+            setTimeout(() => { t.style.opacity='0'; t.style.transform='translateY(10px)'; t.style.transition='all 0.2s'; setTimeout(()=>t.remove(),200); }, 2500);
+        }
+        function hexToRgb(hex) { var r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex); return r ? { r: parseInt(r[1], 16), g: parseInt(r[2], 16), b: parseInt(r[3], 16) } : {r:255,g:255,b:255}; }
+
+        class Layer {
+            constructor(type, content, name) {
+                this.id = 'L_' + Date.now() + Math.floor(Math.random()*1000);
+                this.type = type; 
+                this.name = name;
+                this.visible = true;
+
+                this.x = parseInt(DOM.gW.value) / 2;
+                this.y = parseInt(DOM.gH.value) / 2;
+                this.scale = 100;
+                this.rotation = 0;
+
+                this.opacity = 100; this.hue = 0; this.sat = 100; this.bri = 100;
+
+                this.effect = 'none';
+                this.intensity = 5;
+                
+                this.starColor = '#ffd700'; this.starCount = 20;
+                this.bubbleColor = '#a8efff'; this.bubbleCount = 15;
+                this.glowColor = '#ffdc64'; this.sparkleColor = '#ffffff'; this.sparkleCount = 12;
+                this.heartColor = '#ff4b72'; this.heartCount = 15;
+
+                this.baseImg = null; 
+                this.textParams = { text: "TEXT", font: "Inter", color: "#ffffff", bold: true, size: 80, spacing: 0, stretch: 100, stroke: false, strokeColor: "#000000", strokeWidth: 4 };
+                
+                if(type === 'image') {
+                    this.baseImg = content; 
+                    this.setupLocalCanvas();
+                } else if(type === 'text') {
+                    this.textParams.text = content || "NEW TEXT";
+                    this.generateTextCanvas();
+                }
+                
+                this.cachedFrames = [];
+            }
+
+            generateTextCanvas() {
+                const tc = document.createElement('canvas');
+                const tctx = tc.getContext('2d');
+                const p = this.textParams;
+                const fontStr = `${p.bold ? 'bold' : 'normal'} ${p.size}px ${p.font}`;
+                
+                tctx.font = fontStr;
+                tctx.letterSpacing = p.spacing + 'px';
+                const metrics = tctx.measureText(p.text);
+                
+                const stretchRatio = p.stretch / 100;
+                const strokePad = p.stroke ? p.strokeWidth * 2 : 0;
+                tc.width = Math.max(10, (metrics.width * stretchRatio) + strokePad + 40);
+                tc.height = p.size * 1.5 + strokePad + 20;
+                
+                tctx.font = fontStr; 
+                tctx.letterSpacing = p.spacing + 'px';
+                tctx.textAlign = "center"; tctx.textBaseline = "middle";
+                tctx.lineJoin = "round"; tctx.miterLimit = 2;
+                
+                const cx = tc.width/2; const cy = tc.height/2;
+
+                tctx.save();
+                tctx.translate(cx, cy);
+                tctx.scale(stretchRatio, 1);
+
+                if (p.stroke) {
+                    tctx.lineWidth = p.strokeWidth;
+                    tctx.strokeStyle = p.strokeColor;
+                    tctx.strokeText(p.text, 0, 0);
+                }
+                tctx.fillStyle = p.color;
+                tctx.fillText(p.text, 0, 0);
+                tctx.restore();
+                
+                this.baseImg = tc;
+                this.setupLocalCanvas();
+            }
+
+            setupLocalCanvas() {
+                if(!this.baseImg) return;
+                this.pad = Math.max(this.baseImg.width, this.baseImg.height) * 0.5;
+                this.localW = this.baseImg.width + this.pad * 2;
+                this.localH = this.baseImg.height + this.pad * 2;
+            }
+
+            generateCache(totalFrames, isLooping) {
+                if(!this.baseImg) return;
+                this.cachedFrames = [];
+                
+                const baseCanvas = document.createElement('canvas');
+                baseCanvas.width = this.localW; baseCanvas.height = this.localH;
+                const bCtx = baseCanvas.getContext('2d');
+                bCtx.filter = `opacity(${this.opacity}%) hue-rotate(${this.hue}deg) saturate(${this.sat}%) brightness(${this.bri}%)`;
+                bCtx.drawImage(this.baseImg, this.pad, this.pad);
+                bCtx.filter = 'none';
+
+                const cx = this.localW/2, cy = this.localH/2;
+                for(let i=0; i<totalFrames; i++) {
+                    const fCanvas = document.createElement('canvas');
+                    fCanvas.width = this.localW; fCanvas.height = this.localH;
+                    const fCtx = fCanvas.getContext('2d', { willReadFrequently: true });
+                    
+                    const progress = (totalFrames > 1 && !isLooping) ? (i / (totalFrames - 1)) : (i / totalFrames);
+                    const isLast = (i === totalFrames - 1);
+
+                    fCtx.save();
+                    if(EffectsLogic[this.effect]) {
+                        EffectsLogic[this.effect](fCtx, baseCanvas, this.localW, this.localH, cx, cy, this.intensity, progress, isLast, isLooping, this);
+                    } else {
+                        fCtx.drawImage(baseCanvas, 0, 0);
+                    }
+                    fCtx.restore();
+                    this.cachedFrames.push(fCanvas);
+                }
+            }
+        }
+
+        const EffectsLogic = {
+            none: (ctx, src) => ctx.drawImage(src, 0, 0),
+            wobble: (ctx, src, w, h, cx, cy, int, p) => { for (let y = 0; y < h; y += 2) { const waveX = Math.sin((y * 0.05) + (p * Math.PI * 2)) * int; ctx.drawImage(src, 0, y, w, 2, waveX, y, w, 2); } },
+            float: (ctx, src, w, h, cx, cy, int, p) => { const offY = Math.sin(p * Math.PI * 2) * (int * 2); ctx.drawImage(src, 0, offY); },
+            pulse: (ctx, src, w, h, cx, cy, int, p) => { const s = 1 + Math.sin(p * Math.PI * 2) * (int * 0.005); ctx.translate(cx, cy); ctx.scale(s, s); ctx.translate(-cx, -cy); ctx.drawImage(src, 0, 0); },
+            bounce: (ctx, src, w, h, cx, cy, int, p) => { const jump = int * 4; const yOff = -Math.abs(Math.sin(p * Math.PI)) * jump; const stretch = Math.sin(p * Math.PI) * (int * 0.02); ctx.translate(cx, cy + h/4); ctx.scale(1 - stretch, 1 + stretch); ctx.translate(-cx, -(cy + h/4)); ctx.drawImage(src, 0, yOff); },
+            shake: (ctx, src, w, h, cx, cy, int, p) => { const offX = Math.sin(p * Math.PI * 6) * (int * 2); ctx.drawImage(src, offX, 0); },
+            elastic: (ctx, src, w, h, cx, cy, int, p) => { const scale = 1 + (Math.pow(2, -10 * p) * Math.sin((p * 10 - 0.75) * ((2 * Math.PI) / 3)) * (int * 0.1)); ctx.translate(cx, cy); ctx.scale(scale, scale); ctx.translate(-cx, -cy); ctx.drawImage(src, 0, 0); },
+            swing: (ctx, src, w, h, cx, cy, int, p) => { const angle = Math.sin(p * Math.PI * 2) * (int * 0.05); ctx.translate(cx, cy - h/2); ctx.rotate(angle); ctx.translate(-cx, -(cy - h/2)); ctx.drawImage(src, 0, 0); },
+            heartbeat: (ctx, src, w, h, cx, cy, int, p) => { const phase = (p * 2) % 1; const beatScale = 1 + (Math.sin(phase * Math.PI) * (int * 0.015)); ctx.translate(cx, cy); ctx.scale(beatScale, beatScale); ctx.translate(-cx, -cy); ctx.drawImage(src, 0, 0); },
+            tada: (ctx, src, w, h, cx, cy, int, p) => { let s = 1, r = 0; if(p < 0.1 || p > 0.9) { s = 1; r = 0; } else if (p < 0.2) { s = 0.9; r = -3; } else { s = 1.1 + (int*0.01); r = Math.sin(p * Math.PI * 10) * (int * 0.5); } ctx.translate(cx, cy); ctx.scale(s, s); ctx.rotate(r * Math.PI / 180); ctx.translate(-cx, -cy); ctx.drawImage(src, 0, 0); },
+            squeeze: (ctx, src, w, h, cx, cy, int, p) => { const stretch = Math.sin(p * Math.PI * 2) * (int * 0.02); ctx.translate(cx, cy); ctx.scale(1 + stretch, 1 - stretch); ctx.translate(-cx, -cy); ctx.drawImage(src, 0, 0); },
+            quake: (ctx, src, w, h, cx, cy, int, p, isLast, isLooping) => { if (!isLooping && isLast) { ctx.drawImage(src, 0, 0); return; } ctx.drawImage(src, (Math.random() * int * 2) - int, (Math.random() * int * 2) - int); },
+            flip: (ctx, src, w, h, cx, cy, int, p) => { ctx.translate(cx, cy); ctx.scale(Math.cos(p * Math.PI * 2), 1); ctx.translate(-cx, -cy); ctx.drawImage(src, 0, 0); },
+            spin: (ctx, src, w, h, cx, cy, int, p) => { ctx.translate(cx, cy); ctx.rotate(p * Math.PI * 2); ctx.translate(-cx, -cy); ctx.drawImage(src, 0, 0); },
+            hue: (ctx, src, w, h, cx, cy, int, p) => { ctx.filter = `hue-rotate(${p * 360 * (int / 5)}deg)`; ctx.drawImage(src, 0, 0); ctx.filter = 'none'; },
+            blur: (ctx, src, w, h, cx, cy, int, p) => { const blurAmt = Math.abs(Math.sin(p * Math.PI * 2)) * int; ctx.filter = `blur(${blurAmt}px)`; ctx.drawImage(src, 0, 0); ctx.filter = 'none'; },
+            flicker: (ctx, src, w, h, cx, cy, int, p) => { ctx.globalAlpha = Math.random() > (0.1 * int/10) ? 1 : 0.2; ctx.drawImage(src, 0, 0); },
+            pixelate: (ctx, src, w, h, cx, cy, int, p, isLast, isLooping) => { if (!isLooping && isLast) { ctx.drawImage(src, 0, 0); return; } const size = Math.max(2, int + (Math.random() - 0.5) * int * 0.8); const sw = Math.max(1, w / size); const sh = Math.max(1, h / size); const off = document.createElement('canvas'); off.width = sw; off.height = sh; off.getContext('2d').drawImage(src, 0, 0, sw, sh); ctx.imageSmoothingEnabled = false; ctx.drawImage(off, 0, 0, sw, sh, 0, 0, w, h); ctx.imageSmoothingEnabled = true; },
+            rgb: (ctx, src, w, h, cx, cy, int, p) => {
+                ctx.drawImage(src, 0, 0);
+                const offset = Math.floor(Math.sin(p * Math.PI * 2) * (int * 2));
+                if(offset === 0) return;
+                const imgData = ctx.getImageData(0,0,w,h); const d = imgData.data; const outData = ctx.createImageData(w,h); const od = outData.data;
+                for(let y=0; y<h; y++){ for(let x=0; x<w; x++){ const i = (y*w+x)*4; const rx = x - offset; const bx = x + offset; od[i] = (rx>=0 && rx<w) ? d[(y*w+rx)*4] : 0; od[i+1] = d[i+1]; od[i+2] = (bx>=0 && bx<w) ? d[(y*w+bx)*4+2] : 0; const aR = (rx>=0 && rx<w) ? d[(y*w+rx)*4+3] : 0; const aG = d[i+3]; const aB = (bx>=0 && bx<w) ? d[(y*w+bx)*4+3] : 0; od[i+3] = Math.max(aR, aG, aB); } } ctx.putImageData(outData, 0, 0);
+            },
+            glitch: (ctx, src, w, h, cx, cy, int, p, isLast, isLooping) => {
+                if (!isLooping && isLast) { ctx.drawImage(src, 0, 0); return; } ctx.drawImage(src, 0, 0); const slices = Math.floor(int / 2) + 2;
+                for(let i=0; i<slices; i++) { const sy = Math.random() * h; const sh = Math.random() * (int * 4); const dx = (Math.random() * int * 4) - (int * 2); ctx.drawImage(src, 0, sy, w, sh, dx, sy, w, sh); }
+                if(Math.random() > 0.5) { ctx.globalCompositeOperation = 'source-atop'; ctx.fillStyle = `rgba(255,0,0,${int*0.03})`; ctx.fillRect(0, 0, w, h); ctx.fillStyle = `rgba(0,255,255,${int*0.03})`; ctx.translate(-Math.random()*int, 0); ctx.fillRect(0, 0, w, h); ctx.globalCompositeOperation = 'source-over'; }
+            },
+            
+            // Magic Stardust Particle Effect (Now with Twinkling!)
+            stardust: (ctx, src, w, h, cx, cy, int, p, isLast, isLooping, layer) => {
+                ctx.drawImage(src, 0, 0);
+                const rgb = hexToRgb(layer.starColor);
+                for(let i=0; i<layer.starCount; i++) {
+                    const sp = (p + (i / Math.max(1, layer.starCount))) % 1.0;
+                    const sx = (Math.sin(i * 12.34) * 0.5 + 0.5) * w;
+                    const sy = h - (sp * (h * 1.2)); // Moves upward
+                    const sway = Math.sin(sp * Math.PI * 4 + i) * (int * 2);
+                    
+                    // Added high-frequency sine wave for twinkling effect
+                    const twinkle = Math.sin(p * Math.PI * 20 + i * 5) * 0.5 + 0.5; 
+                    const sScale = (int * 0.6) * (Math.sin(sp * Math.PI) * 0.8 + 0.2) * (0.5 + 0.5 * twinkle); 
+                    const rot = (p * Math.PI * 4) * (i%2===0 ? 1 : -1) + i;
+
+                    if (sScale > 0) {
+                        ctx.save();
+                        ctx.translate(sx + sway, sy);
+                        ctx.rotate(rot);
+                        ctx.scale(sScale, sScale);
+                        
+                        const alpha = Math.sin(sp * Math.PI) * (0.4 + 0.6 * twinkle);
+                        ctx.shadowColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+                        ctx.shadowBlur = 10 * twinkle;
+                        ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+                        
+                        // Draw 5-pointed star
+                        ctx.beginPath();
+                        for(let j=0; j<5; j++) {
+                            ctx.lineTo(Math.cos((18+j*72)*Math.PI/180)*10, -Math.sin((18+j*72)*Math.PI/180)*10);
+                            ctx.lineTo(Math.cos((54+j*72)*Math.PI/180)*4, -Math.sin((54+j*72)*Math.PI/180)*4);
+                        }
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.restore();
+                    }
+                }
+            },
+
+            // Soap Bubbles Effect
+            bubbles: (ctx, src, w, h, cx, cy, int, p, isLast, isLooping, layer) => {
+                ctx.drawImage(src, 0, 0);
+                const rgb = hexToRgb(layer.bubbleColor);
+                for(let i=0; i<layer.bubbleCount; i++) {
+                    const sp = (p + (i / Math.max(1, layer.bubbleCount))) % 1.0;
+                    const sx = (Math.sin(i * 45.67) * 0.5 + 0.5) * w;
+                    const sy = h - (sp * (h * 1.2));
+                    const sway = Math.sin(sp * Math.PI * 2 + i) * (int * 1.5);
+                    const sScale = (int * 0.4 + (i%3)*0.2) * (Math.sin(sp * Math.PI) * 0.5 + 0.5);
+
+                    if (sScale > 0) {
+                        ctx.save();
+                        ctx.translate(sx + sway, sy);
+                        ctx.scale(sScale, sScale);
+                        
+                        // Inner fill
+                        ctx.beginPath();
+                        ctx.arc(0, 0, 10, 0, Math.PI * 2);
+                        ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${Math.sin(sp * Math.PI) * 0.2})`;
+                        ctx.fill();
+                        
+                        // Outline stroke
+                        ctx.lineWidth = 1.5;
+                        ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${Math.sin(sp * Math.PI) * 0.7})`;
+                        ctx.stroke();
+                        
+                        // Specular highlight
+                        ctx.beginPath();
+                        ctx.arc(-3, -3, 2.5, 0, Math.PI * 2);
+                        ctx.fillStyle = `rgba(255, 255, 255, ${Math.sin(sp * Math.PI) * 0.8})`;
+                        ctx.fill();
+                        ctx.restore();
+                    }
+                }
+            },
+
+            glow: (ctx, src, w, h, cx, cy, int, p, isLast, isLooping, layer) => {
+                const rgb = hexToRgb(layer.glowColor); const sRgb = hexToRgb(layer.sparkleColor); const pulse = Math.sin(p * Math.PI * 2); 
+                ctx.shadowColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${0.6 + pulse * 0.3})`; ctx.shadowBlur = int * 1.5 + (pulse * int * 0.5); ctx.drawImage(src, 0, 0); ctx.drawImage(src, 0, 0); ctx.shadowBlur = 0; 
+                for(let i=0; i<layer.sparkleCount; i++) { const sx = (Math.sin(i * 12.98) * 0.4 + 0.5) * w; const sy = (Math.cos(i * 78.23) * 0.4 + 0.5) * h; const sp = (p + (i / Math.max(1, layer.sparkleCount))) % 1.0; const sScale = Math.sin(sp * Math.PI) * (int * 0.12); if (sScale > 0.05) { ctx.save(); ctx.translate(sx, sy); ctx.rotate(p * Math.PI * 2 + i); ctx.scale(sScale, sScale); ctx.fillStyle = `rgba(${sRgb.r}, ${sRgb.g}, ${sRgb.b}, ${Math.sin(sp * Math.PI)})`; ctx.beginPath(); ctx.moveTo(0, -10); ctx.quadraticCurveTo(2, -2, 10, 0); ctx.quadraticCurveTo(2, 2, 0, 10); ctx.quadraticCurveTo(-2, 2, -10, 0); ctx.quadraticCurveTo(-2, -2, 0, -10); ctx.fill(); ctx.restore(); } }
+            },
+            hearts: (ctx, src, w, h, cx, cy, int, p, isLast, isLooping, layer) => {
+                ctx.drawImage(src, 0, 0); const hr = hexToRgb(layer.heartColor);
+                for(let i=0; i<layer.heartCount; i++) { const sp = (p + (i / Math.max(1, layer.heartCount))) % 1.0; const sx = (Math.sin(i * 34.12) * 0.4 + 0.5) * w; const sy = h - (sp * (h * 1.2)); const sway = Math.sin(sp * Math.PI * 4 + i) * (int * 1.5); const sScale = (int * 0.8) * (Math.sin(sp * Math.PI) * 0.5 + 0.5); if (sScale > 0) { ctx.save(); ctx.translate(sx + sway, sy); ctx.fillStyle = `rgba(${hr.r}, ${hr.g}, ${hr.b}, ${Math.sin(sp * Math.PI)})`; ctx.beginPath(); let s = sScale * 10; ctx.moveTo(0, s*0.3); ctx.bezierCurveTo(0, 0, -s*0.5, 0, -s*0.5, s*0.3); ctx.bezierCurveTo(-s*0.5, s*0.6, 0, s*0.8, 0, s); ctx.bezierCurveTo(0, s*0.8, s*0.5, s*0.6, s*0.5, s*0.3); ctx.bezierCurveTo(s*0.5, 0, 0, 0, 0, s*0.3); ctx.fill(); ctx.restore(); } }
+            },
+            drop: (ctx, src, w, h, cx, cy, int, p) => { const easeOutBounce = (x) => { const n1 = 7.5625, d1 = 2.75; if(x < 1/d1) return n1*x*x; else if(x < 2/d1) return n1*(x-=1.5/d1)*x+0.75; else if(x < 2.5/d1) return n1*(x-=2.25/d1)*x+0.9375; else return n1*(x-=2.625/d1)*x+0.984375; }; const dropAmt = (1 - easeOutBounce(p)) * (int * 10 + h/2); ctx.globalAlpha = Math.min(1, p * 5); ctx.drawImage(src, 0, -dropAmt); },
+            pop: (ctx, src, w, h, cx, cy, int, p) => { const easeOutBack = (x) => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); }; let s = easeOutBack(p); if (s < 0) s = 0; ctx.globalAlpha = Math.min(1, p * 5); ctx.translate(cx, cy); ctx.scale(s, s); ctx.translate(-cx, -cy); ctx.drawImage(src, 0, 0); },
+            fadeOut: (ctx, src, w, h, cx, cy, int, p) => { const easeIn = p * p; ctx.globalAlpha = Math.max(0, 1 - easeIn); const s = 1 + (easeIn * (int * 0.02)); ctx.translate(cx, cy); ctx.scale(s, s); ctx.translate(-cx, -cy); ctx.drawImage(src, 0, 0); },
+            slideX: (ctx, src, w, h, cx, cy, int, p) => { const easeOut = 1 - Math.pow(1 - p, 3); const slideAmt = (1 - easeOut) * (int * 10); ctx.globalAlpha = Math.min(1, easeOut * 2); ctx.drawImage(src, -slideAmt, 0); },
+            slideY: (ctx, src, w, h, cx, cy, int, p) => { const easeOut = 1 - Math.pow(1 - p, 3); const slideAmt = (1 - easeOut) * (int * 10); ctx.globalAlpha = Math.min(1, easeOut * 2); ctx.drawImage(src, 0, slideAmt); },
+            wipe: (ctx, src, w, h, cx, cy, int, p) => { const easeOut = 1 - Math.pow(1 - p, 3); ctx.beginPath(); ctx.rect(0, 0, w * easeOut, h); ctx.clip(); ctx.drawImage(src, 0, 0); }
+        };
+
+        function initGlobalCanvas() {
+            let w = parseInt(DOM.gW.value) || 600; let h = parseInt(DOM.gH.value) || 600;
+            if(w<10) w=10; if(h<10) h=10; if(w>2000) w=2000; if(h>2000) h=2000;
+            DOM.gW.value = w; DOM.gH.value = h;
+            DOM.canvas.width = w; DOM.canvas.height = h;
+            DOM.resDisp.innerText = `${w}x${h}`;
+            DOM.infoResDisplay.innerText = `${w}x${h}`;
+            
+            DOM.wrap.style.width = w + 'px';
+            DOM.wrap.style.height = h + 'px';
+            fitWorkspace();
+        }
+
+        function fitWorkspace() {
+            const pW = DOM.workspace.clientWidth - 40; const pH = DOM.workspace.clientHeight - 40;
+            const cW = DOM.canvas.width; const cH = DOM.canvas.height;
+            workspaceScale = Math.min(pW / cW, pH / cH, 1);
+            DOM.wrap.style.transform = `scale(${workspaceScale})`;
+        }
+        window.addEventListener('resize', fitWorkspace);
+
+        function updateGizmoDOM() {
+            const l = layers.find(x => x.id === activeLayerId);
+            if (l && l.visible && l.baseImg) {
+                const s = l.scale / 100;
+                const w = l.baseImg.width * s;
+                const h = l.baseImg.height * s;
+                DOM.gizmo.style.display = 'block';
+                DOM.gizmo.style.width = w + 'px';
+                DOM.gizmo.style.height = h + 'px';
+                DOM.gizmo.style.transform = `translate(${l.x - w/2}px, ${l.y - h/2}px) rotate(${l.rotation}deg)`;
+            } else {
+                DOM.gizmo.style.display = 'none';
+            }
+        }
+
+        function renderLoop(timestamp) {
+            if (!lastTime) lastTime = timestamp;
+            const delay = parseInt(DOM.gD.value);
+            const totalFrames = parseInt(DOM.gF.value);
+
+            if (timestamp - lastTime >= delay) {
+                ctx.clearRect(0, 0, DOM.canvas.width, DOM.canvas.height);
+
+                layers.forEach(l => {
+                    if(!l.visible || !l.cachedFrames || l.cachedFrames.length === 0) return;
+                    const frame = l.cachedFrames[currentFrame % totalFrames];
+                    if(!frame) return;
+
+                    ctx.save();
+                    ctx.translate(l.x, l.y);
+                    ctx.rotate(l.rotation * Math.PI / 180);
+                    const s = l.scale / 100;
+                    ctx.scale(s, s);
+                    ctx.drawImage(frame, -l.localW/2, -l.localH/2);
+                    ctx.restore();
+                });
+
+                currentFrame = (currentFrame + 1) % totalFrames;
+                lastTime = timestamp;
+            }
+            
+            updateGizmoDOM();
+            animId = requestAnimationFrame(renderLoop);
+        }
+
+        function getMousePos(e) {
+            const rect = DOM.canvas.getBoundingClientRect();
+            return { x: (e.clientX - rect.left) / workspaceScale, y: (e.clientY - rect.top) / workspaceScale };
+        }
+
+        document.querySelectorAll('.gizmo-handle').forEach(h => {
+            h.addEventListener('mousedown', (e) => {
+                e.stopPropagation(); e.preventDefault();
+                const l = layers.find(x => x.id === activeLayerId);
+                if (!l) return;
+                const m = getMousePos(e);
+                actionState = h.dataset.action;
+                initialGizmoState = {
+                    scale: l.scale, textSize: l.type === 'text' ? l.textParams.size : 0, rot: l.rotation,
+                    dist: Math.hypot(m.x - l.x, m.y - l.y), angle: Math.atan2(m.y - l.y, m.x - l.x) * 180 / Math.PI
+                };
+            });
+        });
+
+        DOM.gizmoDrag.addEventListener('mousedown', (e) => {
+            e.stopPropagation(); e.preventDefault();
+            const l = layers.find(x => x.id === activeLayerId);
+            if(!l) return;
+            const m = getMousePos(e);
+            actionState = 'drag'; dragOffset.x = l.x - m.x; dragOffset.y = l.y - m.y;
+            document.body.style.cursor = 'grabbing';
+        });
+
+        DOM.canvas.addEventListener('mousedown', (e) => {
+            if(layers.length === 0) return;
+            const m = getMousePos(e);
+            let clicked = null;
+            for(let i = layers.length-1; i>=0; i--) {
+                const checkL = layers[i];
+                if(!checkL.visible) continue;
+                let dx = m.x - checkL.x; let dy = m.y - checkL.y;
+                let rad = -checkL.rotation * Math.PI / 180;
+                let rx = dx * Math.cos(rad) - dy * Math.sin(rad); let ry = dx * Math.sin(rad) + dy * Math.cos(rad);
+                let s = checkL.scale / 100; rx /= s; ry /= s;
+                let hw = checkL.baseImg.width / 2; let hh = checkL.baseImg.height / 2;
+                if (rx >= -hw && rx <= hw && ry >= -hh && ry <= hh) { clicked = checkL; break; }
+            }
+
+            if(clicked) {
+                activeLayerId = clicked.id; syncPropertiesPanel(); 
+                actionState = 'drag'; dragOffset.x = clicked.x - m.x; dragOffset.y = clicked.y - m.y;
+                document.body.style.cursor = 'grabbing';
+            } else {
+                activeLayerId = null; syncPropertiesPanel();
+            }
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if(actionState === 'none') return;
+            const l = layers.find(x => x.id === activeLayerId); if(!l) return;
+            const m = getMousePos(e);
+
+            if(actionState === 'drag') {
+                l.x = m.x + dragOffset.x; l.y = m.y + dragOffset.y;
+                DOM.pX.value = Math.round(l.x); DOM.pY.value = Math.round(l.y);
+            } 
+            else if(actionState.startsWith('scale')) {
+                const currentDist = Math.hypot(m.x - l.x, m.y - l.y); const ratio = currentDist / initialGizmoState.dist;
+                if (l.type === 'text') {
+                    l.textParams.size = Math.min(500, Math.max(10, Math.round(initialGizmoState.textSize * ratio)));
+                    DOM.tSize.value = l.textParams.size; DOM.tSizeNum.value = l.textParams.size;
+                    l.generateTextCanvas(); triggerCache(l); renderLayerList();
+                } else {
+                    l.scale = Math.min(500, Math.max(10, Math.round(initialGizmoState.scale * ratio)));
+                    DOM.pScale.value = l.scale; DOM.pScaleNum.value = l.scale;
+                }
+            }
+            else if(actionState === 'rotate') {
+                const currentAngle = Math.atan2(m.y - l.y, m.x - l.x) * 180 / Math.PI;
+                let diff = currentAngle - initialGizmoState.angle;
+                l.rotation = Math.round(initialGizmoState.rot + diff);
+                DOM.pRot.value = l.rotation; DOM.pRotNum.value = l.rotation;
+            }
+        });
+
+        window.addEventListener('mouseup', () => { actionState = 'none'; document.body.style.cursor = 'default'; });
+
+        // Fit Canvas to Layer Functionality
+        DOM.fitCanvasBtn.addEventListener('click', () => {
+            const l = layers.find(x => x.id === activeLayerId);
+            if (!l || !l.baseImg) {
+                return showToast('레이어를 먼저 선택해주세요.', 'error');
+            }
+            
+            const s = l.scale / 100;
+            const newW = Math.round(l.baseImg.width * s);
+            const newH = Math.round(l.baseImg.height * s);
+            
+            DOM.gW.value = Math.max(10, Math.min(2000, newW));
+            DOM.gH.value = Math.max(10, Math.min(2000, newH));
+            
+            initGlobalCanvas();
+            
+            // Recenter the layer
+            l.x = parseInt(DOM.gW.value) / 2;
+            l.y = parseInt(DOM.gH.value) / 2;
+            
+            DOM.pX.value = Math.round(l.x); 
+            DOM.pY.value = Math.round(l.y);
+            
+            showToast(`캔버스가 레이어 크기(${DOM.gW.value}x${DOM.gH.value})에 맞춰졌습니다.`);
+        });
+
+        // Alignment Functionality
+        DOM.alignBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const l = layers.find(x => x.id === activeLayerId);
+                if (!l || !l.baseImg) return;
+                const alignType = e.currentTarget.dataset.align;
+                const w = DOM.canvas.width; const h = DOM.canvas.height;
+                const s = l.scale / 100;
+                const vw = l.baseImg.width * s; const vh = l.baseImg.height * s;
+
+                switch(alignType) {
+                    case 'left': l.x = vw / 2; break;
+                    case 'center': l.x = w / 2; break;
+                    case 'right': l.x = w - vw / 2; break;
+                    case 'top': l.y = vh / 2; break;
+                    case 'middle': l.y = h / 2; break;
+                    case 'bottom': l.y = h - vh / 2; break;
+                }
+                DOM.pX.value = Math.round(l.x); DOM.pY.value = Math.round(l.y);
+            });
+        });
+
+        window.addEventListener('keydown', (e) => {
+            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
+            const l = layers.find(x => x.id === activeLayerId);
+            if (!l) return;
+            let moved = false; let step = e.shiftKey ? 10 : 1;
+            
+            switch(e.key) {
+                case 'ArrowUp': l.y -= step; moved = true; break;
+                case 'ArrowDown': l.y += step; moved = true; break;
+                case 'ArrowLeft': l.x -= step; moved = true; break;
+                case 'ArrowRight': l.x += step; moved = true; break;
+                case 'Delete':
+                case 'Backspace':
+                    layers = layers.filter(x => x.id !== l.id); activeLayerId = layers.length ? layers[layers.length-1].id : null;
+                    renderLayerList(); syncPropertiesPanel(); break;
+            }
+            if (moved) { e.preventDefault(); DOM.pX.value = Math.round(l.x); DOM.pY.value = Math.round(l.y); }
+        });
+
+        function triggerCache(layer) {
+            DOM.cacheInd.classList.remove('hidden'); clearTimeout(cacheTimer);
+            cacheTimer = setTimeout(() => { layer.generateCache(parseInt(DOM.gF.value), DOM.gLoop.checked); DOM.cacheInd.classList.add('hidden'); }, 50);
+        }
+
+        function triggerAllCache() {
+            DOM.cacheInd.classList.remove('hidden'); clearTimeout(cacheTimer);
+            cacheTimer = setTimeout(() => {
+                const f = parseInt(DOM.gF.value); const lp = DOM.gLoop.checked;
+                layers.forEach(l => l.generateCache(f, lp)); DOM.cacheInd.classList.add('hidden');
+            }, 50);
+        }
+
+        function syncPropertiesPanel() {
+            const l = layers.find(x => x.id === activeLayerId);
+            if (!l) {
+                DOM.noProps.classList.remove('hidden'); DOM.pPanel.classList.add('hidden');
+                document.querySelectorAll('.layer-item').forEach(el => el.classList.remove('active'));
+                return;
+            }
+
+            DOM.noProps.classList.add('hidden'); DOM.pPanel.classList.remove('hidden');
+            DOM.pName.value = l.name; DOM.pTypeIcon.innerText = l.type === 'text' ? 'T' : '🖼️';
+            
+            if(l.type === 'text') {
+                DOM.tSec.classList.remove('hidden'); DOM.pScaleWrap.classList.add('hidden');
+                DOM.tContent.value = l.textParams.text; DOM.tFont.value = l.textParams.font; DOM.tColor.value = l.textParams.color;
+                DOM.tBold.style.backgroundColor = l.textParams.bold ? '#262626' : 'transparent';
+                DOM.tBold.style.borderColor = l.textParams.bold ? '#8b5cf6' : '#262626';
+                DOM.tStroke.checked = l.textParams.stroke; DOM.tStrokeColor.value = l.textParams.strokeColor; DOM.tStrokeWidth.value = l.textParams.strokeWidth;
+                DOM.tSize.value = l.textParams.size; DOM.tSizeNum.value = l.textParams.size;
+                DOM.tSpace.value = l.textParams.spacing; DOM.tSpaceNum.value = l.textParams.spacing;
+                DOM.tStretch.value = l.textParams.stretch; DOM.tStretchNum.value = l.textParams.stretch;
+            } else { 
+                DOM.tSec.classList.add('hidden'); DOM.pScaleWrap.classList.remove('hidden');
+            }
+            
+            DOM.pX.value = Math.round(l.x); DOM.pY.value = Math.round(l.y);
+            DOM.pScale.value = l.scale; DOM.pScaleNum.value = l.scale;
+            DOM.pRot.value = l.rotation; DOM.pRotNum.value = l.rotation;
+            
+            DOM.pOpac.value = l.opacity; DOM.pOpacNum.value = l.opacity; DOM.pHue.value = l.hue; DOM.pHueNum.value = l.hue;
+            DOM.pSat.value = l.sat; DOM.pSatNum.value = l.sat; DOM.pBri.value = l.bri; DOM.pBriNum.value = l.bri;
+            
+            DOM.effectBtns.forEach(b => { if(b.dataset.effect === l.effect) b.classList.add('active'); else b.classList.remove('active'); });
+            DOM.eLabel.innerText = l.effect;
+            DOM.pInt.value = l.intensity; DOM.pIntNum.value = l.intensity;
+
+            // Handle specific panels visibility and sync
+            DOM.starPan.classList.add('hidden'); DOM.bubPan.classList.add('hidden'); 
+            DOM.glowPan.classList.add('hidden'); DOM.heartPan.classList.add('hidden');
+            
+            if(l.effect === 'stardust') {
+                DOM.starPan.classList.remove('hidden'); DOM.starColor.value = l.starColor;
+                DOM.starCount.value = l.starCount; DOM.starCountVal.innerText = l.starCount;
+            } else if(l.effect === 'bubbles') {
+                DOM.bubPan.classList.remove('hidden'); DOM.bubColor.value = l.bubbleColor;
+                DOM.bubCount.value = l.bubbleCount; DOM.bubCountVal.innerText = l.bubbleCount;
+            } else if(l.effect === 'glow') {
+                DOM.glowPan.classList.remove('hidden'); DOM.gColor.value = l.glowColor;
+                DOM.sColor.value = l.sparkleColor; DOM.sCount.value = l.sparkleCount; DOM.sCountVal.innerText = l.sparkleCount;
+            } else if(l.effect === 'hearts') {
+                DOM.heartPan.classList.remove('hidden'); DOM.hColor.value = l.heartColor;
+                DOM.hCount.value = l.heartCount; DOM.hCountVal.innerText = l.heartCount;
+            }
+
+            document.querySelectorAll('.layer-item').forEach(el => { if(el.dataset.id === l.id) el.classList.add('active'); else el.classList.remove('active'); });
+        }
+
+        let draggedListIdx = null;
+
+        function renderLayerList() {
+            DOM.lList.innerHTML = '';
+            if (layers.length === 0) { DOM.lList.appendChild(DOM.emptyMsg); syncPropertiesPanel(); return; }
+
+            [...layers].reverse().forEach((l, revIdx) => {
+                const realIdx = layers.length - 1 - revIdx;
+                const div = document.createElement('div');
+                div.className = `layer-item flex items-center justify-between p-2 rounded cursor-pointer transition select-none group border border-transparent ${l.id === activeLayerId ? 'active' : 'hover:bg-editor-hover/50'}`;
+                div.dataset.id = l.id; div.draggable = true;
+
+                div.ondragstart = (e) => { draggedListIdx = realIdx; e.dataTransfer.effectAllowed = 'move'; div.style.opacity = '0.5'; };
+                div.ondragend = () => { div.style.opacity = '1'; document.querySelectorAll('.layer-item').forEach(el=>el.classList.remove('drag-over')); };
+                div.ondragover = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; div.classList.add('drag-over'); };
+                div.ondragleave = () => { div.classList.remove('drag-over'); };
+                div.ondrop = (e) => {
+                    e.preventDefault(); div.classList.remove('drag-over');
+                    if(draggedListIdx === null || draggedListIdx === realIdx) return;
+                    const [removed] = layers.splice(draggedListIdx, 1);
+                    layers.splice(realIdx, 0, removed); renderLayerList();
+                };
+
+                const left = document.createElement('div'); left.className = "flex items-center gap-2 overflow-hidden w-full";
+                
+                const visBtn = document.createElement('button'); visBtn.className = "text-editor-muted hover:text-white shrink-0";
+                visBtn.innerHTML = l.visible ? `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>` : `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path></svg>`;
+                visBtn.onclick = (e) => { e.stopPropagation(); l.visible = !l.visible; renderLayerList(); };
+
+                const thumb = document.createElement('div'); thumb.className = "w-6 h-6 bg-[#000] rounded overflow-hidden flex items-center justify-center shrink-0 text-xs font-bold text-editor-muted";
+                if(l.type === 'image') { const imgC = new Image(); imgC.src = l.baseImg.src; imgC.className="max-w-full max-h-full object-contain"; thumb.appendChild(imgC); }
+                else { thumb.innerText = 'T'; }
+
+                const name = document.createElement('span'); name.className = "text-xs truncate text-editor-text group-hover:text-white"; name.innerText = l.name;
+                left.append(visBtn, thumb, name);
+
+                const del = document.createElement('button'); del.className = "p-1 hover:bg-rose-900/50 rounded text-editor-muted hover:text-rose-400 transition ml-1 opacity-0 group-hover:opacity-100";
+                del.innerHTML = `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>`;
+                del.onclick = (e) => { 
+                    e.stopPropagation(); l.cachedFrames = null; l.baseImg = null; layers.splice(realIdx, 1); 
+                    if(activeLayerId === l.id) activeLayerId = layers.length ? layers[layers.length-1].id : null;
+                    renderLayerList(); syncPropertiesPanel();
+                };
+
+                div.append(left, del); div.onclick = () => { activeLayerId = l.id; syncPropertiesPanel(); }; DOM.lList.appendChild(div);
+            });
+        }
+
+        DOM.gW.addEventListener('change', initGlobalCanvas); DOM.gH.addEventListener('change', initGlobalCanvas);
+        DOM.gF.addEventListener('input', () => { DOM.gFVal.innerText = DOM.gF.value; triggerAllCache(); });
+        DOM.gD.addEventListener('input', () => { DOM.gDVal.innerText = DOM.gD.value + 'ms'; });
+        DOM.gLoop.addEventListener('change', triggerAllCache);
+        DOM.pName.addEventListener('change', () => { const l = layers.find(x => x.id === activeLayerId); if(l) { l.name = DOM.pName.value; renderLayerList(); } });
+
+        // Fullscreen Drag & Drop Overlay Logic
+        let dragCounter = 0;
+        window.addEventListener('dragenter', (e) => { e.preventDefault(); dragCounter++; DOM.dropOverlay.classList.remove('hidden'); DOM.dropOverlay.classList.add('flex'); });
+        window.addEventListener('dragleave', (e) => { e.preventDefault(); dragCounter--; if(dragCounter === 0) { DOM.dropOverlay.classList.remove('flex'); DOM.dropOverlay.classList.add('hidden'); } });
+        window.addEventListener('drop', (e) => {
+            e.preventDefault(); dragCounter = 0; DOM.dropOverlay.classList.remove('flex'); DOM.dropOverlay.classList.add('hidden');
+            if(e.dataTransfer.files && e.dataTransfer.files.length > 0 && e.dataTransfer.files[0].type.startsWith('image/')) handleImageFiles(e.dataTransfer.files); 
+        });
+        window.addEventListener('dragover', e => e.preventDefault());
+        DOM.lUpload.addEventListener('change', e => { if(e.target.files.length) handleImageFiles(e.target.files); DOM.lUpload.value=''; });
+        
+        DOM.addTextBtn.addEventListener('click', () => {
+            const l = new Layer('text', 'NEW TEXT', 'Text Layer'); layers.push(l); activeLayerId = l.id;
+            triggerCache(l); renderLayerList(); syncPropertiesPanel();
+            if(!animId) animId = requestAnimationFrame(renderLoop);
+        });
+
+        function handleImageFiles(files) {
+            Array.from(files).forEach(f => {
+                if(!f.type.startsWith('image/')) return;
+                const r = new FileReader();
+                r.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        if(img.width > 1200 || img.height > 1200) {
+                            const ratio = Math.min(1200/img.width, 1200/img.height);
+                            const tC = document.createElement('canvas'); tC.width = img.width*ratio; tC.height = img.height*ratio;
+                            tC.getContext('2d').drawImage(img, 0, 0, tC.width, tC.height);
+                            const rs = new Image(); rs.onload = () => { addImgLayer(rs, f.name); }; rs.src = tC.toDataURL();
+                        } else { addImgLayer(img, f.name); }
+                    }; img.src = e.target.result;
+                }; r.readAsDataURL(f);
+            });
+        }
+        function addImgLayer(img, name) {
+            const l = new Layer('image', img, name); layers.push(l); activeLayerId = l.id;
+            triggerCache(l); renderLayerList(); syncPropertiesPanel();
+            if(!animId) animId = requestAnimationFrame(renderLoop);
+        }
+
+        // Text Properties Sync
+        const updateTextFromRange = () => {
+            const l = layers.find(x => x.id === activeLayerId); if(!l || l.type !== 'text') return;
+            l.textParams.text = DOM.tContent.value || " "; l.textParams.font = DOM.tFont.value; l.textParams.color = DOM.tColor.value;
+            l.textParams.stroke = DOM.tStroke.checked; l.textParams.strokeColor = DOM.tStrokeColor.value; l.textParams.strokeWidth = parseInt(DOM.tStrokeWidth.value)||1;
+            l.textParams.size = parseInt(DOM.tSize.value); DOM.tSizeNum.value = l.textParams.size;
+            l.textParams.spacing = parseInt(DOM.tSpace.value); DOM.tSpaceNum.value = l.textParams.spacing;
+            l.textParams.stretch = parseInt(DOM.tStretch.value); DOM.tStretchNum.value = l.textParams.stretch;
+            l.name = DOM.tContent.value; DOM.pName.value = l.name; l.generateTextCanvas(); triggerCache(l); renderLayerList();
+        };
+        const updateTextFromNum = () => {
+            const l = layers.find(x => x.id === activeLayerId); if(!l || l.type !== 'text') return;
+            l.textParams.text = DOM.tContent.value || " "; l.textParams.font = DOM.tFont.value; l.textParams.color = DOM.tColor.value;
+            l.textParams.stroke = DOM.tStroke.checked; l.textParams.strokeColor = DOM.tStrokeColor.value; l.textParams.strokeWidth = parseInt(DOM.tStrokeWidth.value)||1;
+            l.textParams.size = parseInt(DOM.tSizeNum.value)||10; DOM.tSize.value = l.textParams.size;
+            l.textParams.spacing = parseInt(DOM.tSpaceNum.value)||0; DOM.tSpace.value = l.textParams.spacing;
+            l.textParams.stretch = parseInt(DOM.tStretchNum.value)||100; DOM.tStretch.value = l.textParams.stretch;
+            l.name = DOM.tContent.value; DOM.pName.value = l.name; l.generateTextCanvas(); triggerCache(l); renderLayerList();
+        };
+
+        DOM.tContent.addEventListener('input', updateTextFromRange); DOM.tFont.addEventListener('input', updateTextFromRange); DOM.tColor.addEventListener('input', updateTextFromRange);
+        DOM.tStroke.addEventListener('change', updateTextFromRange); DOM.tStrokeColor.addEventListener('input', updateTextFromRange); DOM.tStrokeWidth.addEventListener('input', updateTextFromRange);
+        DOM.tSize.addEventListener('input', updateTextFromRange); DOM.tSpace.addEventListener('input', updateTextFromRange); DOM.tStretch.addEventListener('input', updateTextFromRange);
+        DOM.tSizeNum.addEventListener('input', updateTextFromNum); DOM.tSpaceNum.addEventListener('input', updateTextFromNum); DOM.tStretchNum.addEventListener('input', updateTextFromNum);
+        
+        DOM.tBold.addEventListener('click', () => { const l = layers.find(x => x.id === activeLayerId); if(l) { l.textParams.bold = !l.textParams.bold; syncPropertiesPanel(); updateTextFromRange(); }});
+
+        // Transform Sync
+        const updateTransFromRange = () => { const l = layers.find(x => x.id === activeLayerId); if(!l) return; l.x = parseFloat(DOM.pX.value)||0; l.y = parseFloat(DOM.pY.value)||0; l.scale = parseInt(DOM.pScale.value); DOM.pScaleNum.value = l.scale; l.rotation = parseInt(DOM.pRot.value); DOM.pRotNum.value = l.rotation; };
+        const updateTransFromNum = () => { const l = layers.find(x => x.id === activeLayerId); if(!l) return; l.x = parseFloat(DOM.pX.value)||0; l.y = parseFloat(DOM.pY.value)||0; l.scale = parseInt(DOM.pScaleNum.value)||10; DOM.pScale.value = l.scale; l.rotation = parseInt(DOM.pRotNum.value)||0; DOM.pRot.value = l.rotation; };
+        DOM.pX.addEventListener('input', updateTransFromRange); DOM.pY.addEventListener('input', updateTransFromRange); DOM.pScale.addEventListener('input', updateTransFromRange); DOM.pRot.addEventListener('input', updateTransFromRange);
+        DOM.pScaleNum.addEventListener('input', updateTransFromNum); DOM.pRotNum.addEventListener('input', updateTransFromNum);
+
+        // Effect Filter Sync
+        DOM.effectFilters.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                DOM.effectFilters.forEach(b => { b.classList.remove('bg-purple-600', 'text-white'); b.classList.add('bg-editor-bg', 'text-editor-muted'); });
+                e.target.classList.add('bg-purple-600', 'text-white'); e.target.classList.remove('bg-editor-bg', 'text-editor-muted');
+                const filter = e.target.dataset.filter;
+                DOM.effectBtns.forEach(effectBtn => { effectBtn.style.display = (filter === 'all' || effectBtn.dataset.category === filter || effectBtn.dataset.category === 'all') ? 'block' : 'none'; });
+            });
+        });
+
+        // Appearance Sync
+        const updateAppFromRange = () => { const l = layers.find(x => x.id === activeLayerId); if(!l) return; l.opacity = parseInt(DOM.pOpac.value); DOM.pOpacNum.value = l.opacity; l.hue = parseInt(DOM.pHue.value); DOM.pHueNum.value = l.hue; l.sat = parseInt(DOM.pSat.value); DOM.pSatNum.value = l.sat; l.bri = parseInt(DOM.pBri.value); DOM.pBriNum.value = l.bri; triggerCache(l); };
+        const updateAppFromNum = () => { const l = layers.find(x => x.id === activeLayerId); if(!l) return; l.opacity = parseInt(DOM.pOpacNum.value)||0; DOM.pOpac.value = l.opacity; l.hue = parseInt(DOM.pHueNum.value)||0; DOM.pHue.value = l.hue; l.sat = parseInt(DOM.pSatNum.value)||0; DOM.pSat.value = l.sat; l.bri = parseInt(DOM.pBriNum.value)||0; DOM.pBri.value = l.bri; triggerCache(l); };
+        DOM.pOpac.addEventListener('input', updateAppFromRange); DOM.pHue.addEventListener('input', updateAppFromRange); DOM.pSat.addEventListener('input', updateAppFromRange); DOM.pBri.addEventListener('input', updateAppFromRange);
+        DOM.pOpacNum.addEventListener('input', updateAppFromNum); DOM.pHueNum.addEventListener('input', updateAppFromNum); DOM.pSatNum.addEventListener('input', updateAppFromNum); DOM.pBriNum.addEventListener('input', updateAppFromNum);
+
+        DOM.effectBtns.forEach(btn => { btn.addEventListener('click', (e) => { const l = layers.find(x => x.id === activeLayerId); if(!l) return; l.effect = e.target.dataset.effect; syncPropertiesPanel(); triggerCache(l); }); });
+        
+        const updateIntFromRange = () => { const l=layers.find(x=>x.id===activeLayerId); if(l){ l.intensity=parseInt(DOM.pInt.value); DOM.pIntNum.value=l.intensity; triggerCache(l); }};
+        const updateIntFromNum = () => { const l=layers.find(x=>x.id===activeLayerId); if(l){ l.intensity=parseInt(DOM.pIntNum.value)||1; DOM.pInt.value=l.intensity; triggerCache(l); }};
+        DOM.pInt.addEventListener('input', updateIntFromRange); DOM.pIntNum.addEventListener('input', updateIntFromNum);
+
+        const updateSpec = () => {
+            const l = layers.find(x=>x.id===activeLayerId); if(!l) return;
+            l.starColor = DOM.starColor.value; l.starCount = parseInt(DOM.starCount.value); DOM.starCountVal.innerText = l.starCount;
+            l.bubbleColor = DOM.bubColor.value; l.bubbleCount = parseInt(DOM.bubCount.value); DOM.bubCountVal.innerText = l.bubbleCount;
+            l.glowColor = DOM.gColor.value; l.sparkleColor = DOM.sColor.value; l.sparkleCount = parseInt(DOM.sCount.value); DOM.sCountVal.innerText = l.sparkleCount;
+            l.heartColor = DOM.hColor.value; l.heartCount = parseInt(DOM.hCount.value); DOM.hCountVal.innerText = l.heartCount;
+            triggerCache(l);
+        };
+        DOM.starColor.addEventListener('input', updateSpec); DOM.starCount.addEventListener('input', updateSpec);
+        DOM.bubColor.addEventListener('input', updateSpec); DOM.bubCount.addEventListener('input', updateSpec);
+        DOM.gColor.addEventListener('input', updateSpec); DOM.sColor.addEventListener('input', updateSpec); DOM.sCount.addEventListener('input', updateSpec);
+        DOM.hColor.addEventListener('input', updateSpec); DOM.hCount.addEventListener('input', updateSpec);
+
+        DOM.calcSizeBtn.addEventListener('click', () => {
+            if(layers.length === 0) return showToast('레이어가 없습니다.', 'error');
+            DOM.sizeCalcInd.classList.remove('hidden'); DOM.sizeVal.innerText = '';
+            
+            setTimeout(() => {
+                try {
+                    const w = DOM.canvas.width; const h = DOM.canvas.height;
+                    const fTotal = parseInt(DOM.gF.value); const delay = parseInt(DOM.gD.value);
+                    const testC = document.createElement('canvas'); testC.width = w; testC.height = h; const testCtx = testC.getContext('2d');
+                    const framesData = []; const delays = [];
+                    
+                    layers.forEach(l => l.generateCache(fTotal, DOM.gLoop.checked));
+
+                    for(let i=0; i<fTotal; i++) {
+                        testCtx.clearRect(0,0,w,h);
+                        layers.forEach(l => {
+                            if(!l.visible || !l.cachedFrames || !l.cachedFrames[i]) return;
+                            testCtx.save();
+                            testCtx.translate(l.x, l.y); testCtx.rotate(l.rotation * Math.PI / 180);
+                            const s = l.scale / 100; testCtx.scale(s, s);
+                            testCtx.drawImage(l.cachedFrames[i], -l.localW/2, -l.localH/2);
+                            testCtx.restore();
+                        });
+                        framesData.push(new Uint8Array(testCtx.getImageData(0,0,w,h).data).buffer); delays.push(delay);
+                    }
+                    
+                    const apng = UPNG.encode(framesData, w, h, 0, delays); const mb = (apng.byteLength / 1024) / 1024;
+                    DOM.sizeVal.innerText = mb > 1 ? mb.toFixed(2) + ' MB' : Math.round(apng.byteLength/1024) + ' KB';
+                    if (mb > 5) DOM.sizeWarn.classList.remove('hidden'); else DOM.sizeWarn.classList.add('hidden');
+                } catch(e) { DOM.sizeVal.innerText = '오류'; } finally { DOM.sizeCalcInd.classList.add('hidden'); }
+            }, 50);
+        });
+
+        let gifWorkerUrl = null;
+        async function getGifWorker() {
+            if (gifWorkerUrl) return gifWorkerUrl;
+            try { const res = await fetch('https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js'); const text = await res.text(); const blob = new Blob([text], { type: 'application/javascript' }); gifWorkerUrl = URL.createObjectURL(blob); return gifWorkerUrl; } 
+            catch (e) { return 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js'; }
+        }
+
+        DOM.exportBtn.addEventListener('click', async () => {
+            if(layers.length === 0) return showToast('렌더링할 레이어가 없습니다.', 'error');
+            DOM.overlay.classList.remove('hidden'); DOM.overlay.classList.add('flex');
+            const format = DOM.exportFormat.value;
+
+            setTimeout(async () => {
+                try {
+                    const w = DOM.canvas.width; const h = DOM.canvas.height;
+                    const fTotal = parseInt(DOM.gF.value); const delay = parseInt(DOM.gD.value);
+                    const exC = document.createElement('canvas'); exC.width = w; exC.height = h; const exCtx = exC.getContext('2d', { willReadFrequently: true });
+                    layers.forEach(l => l.generateCache(fTotal, DOM.gLoop.checked));
+
+                    if (format === 'apng') {
+                        const framesData = []; const delays = [];
+                        for(let i=0; i<fTotal; i++) {
+                            exCtx.clearRect(0,0,w,h);
+                            layers.forEach(l => {
+                                if(!l.visible || !l.cachedFrames || !l.cachedFrames[i]) return;
+                                exCtx.save();
+                                exCtx.translate(l.x, l.y); exCtx.rotate(l.rotation * Math.PI / 180);
+                                const s = l.scale / 100; exCtx.scale(s, s);
+                                exCtx.drawImage(l.cachedFrames[i], -l.localW/2, -l.localH/2);
+                                exCtx.restore();
+                            });
+                            framesData.push(new Uint8Array(exCtx.getImageData(0,0,w,h).data).buffer); delays.push(delay);
+                        }
+                        let apng = UPNG.encode(framesData, w, h, 0, delays);
+                        if (!DOM.gLoop.checked) apng = setApngLoop(apng, false);
+
+                        const blob = new Blob([apng], {type: "image/apng"}); const url = URL.createObjectURL(blob);
+                        const a = document.createElement("a"); a.href = url; a.download = `APNG_Studio_${w}x${h}.png`;
+                        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+                        
+                        showToast('APNG로 성공적으로 렌더링되었습니다!');
+                        DOM.overlay.classList.remove('flex'); DOM.overlay.classList.add('hidden');
+                    } 
+                    else if (format === 'gif') {
+                        const workerURL = await getGifWorker();
+                        const gif = new GIF({ workers: 2, quality: 10, width: w, height: h, workerScript: workerURL, transparent: 'rgba(0,0,0,0)' });
+
+                        for(let i=0; i<fTotal; i++) {
+                            exCtx.clearRect(0,0,w,h);
+                            layers.forEach(l => {
+                                if(!l.visible || !l.cachedFrames || !l.cachedFrames[i]) return;
+                                exCtx.save();
+                                exCtx.translate(l.x, l.y); exCtx.rotate(l.rotation * Math.PI / 180);
+                                const s = l.scale / 100; exCtx.scale(s, s);
+                                exCtx.drawImage(l.cachedFrames[i], -l.localW/2, -l.localH/2);
+                                exCtx.restore();
+                            });
+                            gif.addFrame(exCtx, {delay: delay, copy: true});
+                        }
+
+                        gif.on('finished', function(blob) {
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement("a"); a.href = url; a.download = `FX_Studio_${w}x${h}.gif`;
+                            document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+                            showToast('GIF로 성공적으로 렌더링되었습니다!');
+                            DOM.overlay.classList.remove('flex'); DOM.overlay.classList.add('hidden');
+                        });
+                        gif.render();
+                    }
+                } catch(e) { showToast('렌더링 중 오류가 발생했습니다.', 'error'); DOM.overlay.classList.remove('flex'); DOM.overlay.classList.add('hidden'); }
+            }, 100);
+        });
+
+        initGlobalCanvas();
+    </script>
+</body>
+</html>
