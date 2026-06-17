@@ -10,38 +10,98 @@
 
   <!-- 디자인 및 필수 기능(React, Tailwind) 불러오기 -->
   <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Tailwind 컬러 팔레트를 메인 페이지와 통일 -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'deep-pink': '#F875AA',
+            'soft-pink': '#FDEDED',
+            'mint': '#EDFFF0',
+            'sky': '#AEDEFC',
+            'ink': '#333333',
+            'ivory': '#FFFFF0',
+          }
+        }
+      }
+    }
+  </script>
+
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   
   <style>
     /* 폰트 적용 (갈무리9) */
-    @font-face {
-        font-family: 'Galmuri9';
-        src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_20-10-21@1.0/Galmuri9.woff') format('woff');
-        font-weight: normal;
-        font-style: normal;
-    }
+    @import url('https://cdn.jsdelivr.net/npm/galmuri@latest/dist/galmuri.css');
     
     body {
+        /* 메인 페이지와 동일한 그라데이션 배경 적용 */
+        background: linear-gradient(to bottom, #FFFFF0 0%, #ffe6f0 100%);
+        background-attachment: fixed;
+        color: #333333;
         font-family: 'Galmuri9', sans-serif;
     }
 
-    /* 메인 캔버스 내부 텍스트 폰트 보호용 (인게임 대화창과 유사하게 고딕 유지) */
+    /* 메인 캔버스 내부 텍스트 폰트 보호용 (인게임 고딕 폰트) */
     .canvas-text {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
 
     /* 스크롤바 커스텀 */
-    .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background: #9ca3af; border-radius: 10px; }
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(255,255,255,0.5); }
+    ::-webkit-scrollbar-thumb { background: #F875AA; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #e06095; }
+
+    /* 고전 윈도우 스타일 (툴바) */
+    .retro-window {
+        background: #FDEDED;
+        border: 2px solid #fff;
+        border-right-color: #F875AA;
+        border-bottom-color: #F875AA;
+        box-shadow: 4px 4px 0px rgba(0,0,0,0.1);
+    }
+
+    .retro-header {
+        background: linear-gradient(90deg, #F875AA, #ff9eb5);
+        color: white;
+        text-shadow: 1px 1px 0 rgba(0,0,0,0.2);
+    }
+
+    .retro-btn {
+        border: 2px solid white;
+        border-right-color: #d1d5db;
+        border-bottom-color: #d1d5db;
+        box-shadow: 1px 1px 0 rgba(0,0,0,0.05);
+    }
+    .retro-btn:active {
+        border: 2px solid #d1d5db;
+        border-right-color: white;
+        border-bottom-color: white;
+        transform: translate(1px, 1px);
+    }
+
+    /* 모니터 프레임 스타일 (메인 페이지 참고) */
+    .monitor-frame {
+        background-color: #f0f0f0;
+        border-radius: 16px;
+        padding: 16px;
+        box-shadow: 
+            inset 2px 2px 5px rgba(255,255,255,0.8),
+            inset -2px -2px 5px rgba(0,0,0,0.1),
+            6px 6px 15px rgba(0,0,0,0.08);
+        border: 4px solid #fff;
+    }
   </style>
 </head>
-<body class="bg-[#eef0f2]">
+<body>
+  <!-- 리액트 렌더링 컨테이너 -->
   <div id="root"></div>
 
+  <!-- 주의: 여기서 import 구문을 쓰면 절대 안됩니다! -->
   <script type="text/babel">
     const { useState, useEffect, useRef, useCallback } = React;
 
@@ -66,7 +126,7 @@
       </svg>
     );
 
-    // ✅ CCFolia 스탠딩 가로 규격 240px 고정
+    // CCFolia 스탠딩 가로 규격 240px 고정
     const CANVAS_WIDTH = 240;
 
     const RoundedOutlineFilter = ({ id, thickness, color }) => {
@@ -89,15 +149,14 @@
       );
     };
 
-    // --- 인게임 미리보기 컴포넌트 ---
     const GamePreview = ({ fileItem, scale, position, onPositionChange, onScaleChange, outlineThickness, outlineColor, refFiles, canvasHeight }) => {
       const [imgDetails, setImgDetails] = useState(null);
       const [isDragging, setIsDragging] = useState(false);
       const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
       const [showGrid, setShowGrid] = useState(false);
-      const [bgColor, setBgColor] = useState('#e5e7eb'); 
+      const [bgColor, setBgColor] = useState('#AEDEFC'); // 기본 배경색을 sky 톤으로
       
-      const PRESET_COLORS = ['#e5e7eb', '#ffffff', '#1f2937', '#10b981', '#3b82f6']; 
+      const PRESET_COLORS = ['#AEDEFC', '#FDEDED', '#EDFFF0', '#F875AA', '#333333']; 
       const containerRef = useRef(null);
 
       useEffect(() => {
@@ -112,7 +171,7 @@
         img.src = fileItem.preview;
       }, [fileItem]);
 
-      // ✅ 휠 스크롤 방지 및 줌 기능 (Native Event 활용)
+      // 브라우저 기본 스크롤 방지 및 줌
       useEffect(() => {
         const container = containerRef.current;
         if (!container) return;
@@ -120,7 +179,6 @@
         const handleNativeWheel = (e) => {
           e.preventDefault(); 
           if (!fileItem) return;
-          
           const scaleAdjust = e.deltaY > 0 ? 0.95 : 1.05;
           onScaleChange(Math.max(0.1, scale * scaleAdjust));
         };
@@ -139,6 +197,7 @@
 
       const handleMouseMove = (e) => {
         if (!isDragging || !fileItem) return;
+        // Viewbox 가로 640px 비율에 맞춘 이동
         const ratio = containerRef.current ? containerRef.current.clientWidth / 640 : 1; 
         const dx = (e.clientX - lastMousePos.x) / ratio;
         const dy = (e.clientY - lastMousePos.y) / ratio;
@@ -162,40 +221,42 @@
       };
 
       return (
-        <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200 flex flex-col h-full">
-          <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-3 mb-3 shrink-0">
-            <h2 className="text-lg font-bold text-black flex items-center gap-1.5">
-              <Icon path="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" className="w-5 h-5 text-black" />
+        <div className="monitor-frame flex flex-col h-full bg-white relative">
+          
+          {/* 헤더 및 컨트롤러 */}
+          <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-3 mb-3 shrink-0 px-2 pt-1">
+            <h2 className="text-lg font-bold text-ink flex items-center gap-1.5">
+              <Icon path="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" className="w-5 h-5 text-deep-pink" />
               메인 캔버스
             </h2>
             
             <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto">
               {fileItem && (
-                <span className="text-[10px] text-gray-600 bg-gray-100 px-2 py-1 rounded border border-gray-200 hidden md:inline-block tracking-tight">
-                  💡 <b>드래그/휠/방향키</b>로 조절
+                <span className="text-[10px] text-ink bg-ivory px-2 py-1 rounded border border-gray-300 hidden md:inline-block shadow-sm">
+                  💡 <b>드래그/휠/방향키</b> 조절
                 </span>
               )}
 
-              <div className="flex items-center gap-1.5 bg-gray-50 px-2 py-1 rounded border border-gray-200 w-full sm:w-auto">
+              <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded border border-gray-300 w-full sm:w-auto shadow-sm">
                 <span className="text-[10px] text-gray-500 whitespace-nowrap">배경:</span>
                 <div className="flex items-center gap-1">
                   {PRESET_COLORS.map(c => (
                     <button 
                       key={c} onClick={() => setBgColor(c)} 
-                      className={`w-3.5 h-3.5 rounded-full border border-gray-300 transition-all ${bgColor === c ? 'ring-1 ring-black ring-offset-1 scale-110' : 'hover:scale-110'}`} 
+                      className={`w-3.5 h-3.5 rounded-full border border-gray-300 transition-all ${bgColor === c ? 'ring-2 ring-deep-pink scale-110' : 'hover:scale-110'}`} 
                       style={{ backgroundColor: c }} title="배경색 변경" 
                     />
                   ))}
                   <div className="w-[1px] h-3 bg-gray-300 mx-0.5"></div>
                   <label className="relative w-3.5 h-3.5 rounded-full border border-gray-300 hover:scale-110 transition-transform overflow-hidden cursor-pointer shadow-sm" title="직접 색상 선택">
-                    <div className="absolute inset-0 pointer-events-none" style={{ background: 'conic-gradient(#f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)' }}></div>
+                    <div className="absolute inset-0 pointer-events-none" style={{ background: 'conic-gradient(#F875AA, #FDEDED, #EDFFF0, #AEDEFC, #333333, #F875AA)' }}></div>
                     <input type="color" value={bgColor} onChange={e => setBgColor(e.target.value)} className="absolute opacity-0 w-6 h-6 -top-1 -left-1 cursor-pointer" />
                   </label>
                 </div>
               </div>
 
-              <label className="flex items-center gap-1 text-[11px] text-gray-700 cursor-pointer hover:text-black transition-colors whitespace-nowrap border border-gray-200 bg-gray-50 px-2 py-1 rounded">
-                <input type="checkbox" checked={showGrid} onChange={(e) => setShowGrid(e.target.checked)} className="w-3 h-3 rounded border-gray-400 text-black focus:ring-black accent-black" />
+              <label className="flex items-center gap-1 text-[11px] text-ink cursor-pointer hover:text-deep-pink transition-colors whitespace-nowrap border border-gray-300 bg-white px-2 py-1 rounded shadow-sm">
+                <input type="checkbox" checked={showGrid} onChange={(e) => setShowGrid(e.target.checked)} className="w-3 h-3 rounded text-deep-pink focus:ring-deep-pink accent-deep-pink" />
                 안내선
               </label>
             </div>
@@ -203,15 +264,15 @@
 
           <div 
             ref={containerRef}
-            className="w-full flex-1 flex justify-center items-center rounded-xl overflow-hidden border border-gray-200 shadow-inner transition-colors duration-300" 
+            className="w-full flex-1 flex justify-center items-center rounded-lg overflow-hidden border-2 border-gray-300 shadow-inner transition-colors duration-300 relative" 
             style={{ backgroundColor: bgColor, minHeight: '350px' }}
           >
             <div className="w-full h-full flex justify-center items-center">
               {fileItem || refFiles.length > 0 ? (
                 <svg 
-                  /* ✅ 최소 높이(Math.max) 제거하여 낮은 높이에서도 아래쪽 빈 공간이 안 생기게 최적화 */
-                  viewBox={`-20 -40 640 ${canvasHeight + 180}`} 
-                  className={`w-full max-w-2xl h-auto block touch-none outline-none overflow-visible ${fileItem ? 'cursor-move focus:ring-2 focus:ring-black/20 focus:ring-inset' : 'cursor-default'}`} 
+                  /* 여백 축소 및 높이 400 미만일 때 잘리는 문제 해결 (canvasHeight + 160 여유만 줌) */
+                  viewBox={`-20 -40 640 ${canvasHeight + 160}`} 
+                  className={`w-full max-w-2xl h-auto block touch-none outline-none overflow-visible ${fileItem ? 'cursor-move focus:ring-2 focus:ring-deep-pink/50 focus:ring-inset' : 'cursor-default'}`} 
                   tabIndex={0}
                   onMouseDown={handleMouseDown}
                   onMouseMove={handleMouseMove}
@@ -226,9 +287,9 @@
                     <RoundedOutlineFilter id="main-outline-filter" thickness={outlineThickness} color={outlineColor} />
                   </defs>
 
-                  <rect x="-20" y="-40" width="640" height={canvasHeight + 180} fill={bgColor} />
+                  <rect x="-20" y="-40" width="640" height={canvasHeight + 160} fill={bgColor} />
                   
-                  <rect x="0" y="0" width={CANVAS_WIDTH} height={canvasHeight} fill={bgColor} stroke={bgColor === '#ffffff' ? '#e5e7eb' : '#ffffff'} strokeOpacity="0.3" strokeWidth="2" />
+                  <rect x="0" y="0" width={CANVAS_WIDTH} height={canvasHeight} fill={bgColor} stroke="rgba(255,255,255,0.6)" strokeOpacity="0.8" strokeWidth="2" />
 
                   {imgDetails && (
                     <g clipPath="url(#stand-clip)">
@@ -249,42 +310,36 @@
                     const drawY = canvasHeight - drawHeight; 
                     return (
                       <g key={ref.id} transform={`translate(${ref.offsetX}, 0)`} opacity={ref.opacity} pointerEvents="none">
-                        <image 
-                          href={ref.preview} 
-                          x={ref.posX} 
-                          y={drawY} 
-                          width={drawWidth} 
-                          height={drawHeight} 
-                        />
+                        <image href={ref.preview} x={ref.posX} y={drawY} width={drawWidth} height={drawHeight} />
                       </g>
                     );
                   })}
 
                   {showGrid && (
                     <g pointerEvents="none">
-                      <rect x="0" y="0" width={CANVAS_WIDTH} height={canvasHeight} fill="none" stroke="rgba(0,0,0,0.2)" strokeWidth="2" />
-                      <line x1={CANVAS_WIDTH / 2} y1="0" x2={CANVAS_WIDTH / 2} y2={canvasHeight} stroke="rgba(255,0,0,0.3)" strokeWidth="1" />
-                      <line x1="0" y1={canvasHeight / 2} x2={CANVAS_WIDTH} y2={canvasHeight / 2} stroke="rgba(255,0,0,0.3)" strokeWidth="1" />
+                      <rect x="0" y="0" width={CANVAS_WIDTH} height={canvasHeight} fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="2" />
+                      <line x1={CANVAS_WIDTH / 2} y1="0" x2={CANVAS_WIDTH / 2} y2={canvasHeight} stroke="rgba(248,117,170,0.4)" strokeWidth="1" />
+                      <line x1="0" y1={canvasHeight / 2} x2={CANVAS_WIDTH} y2={canvasHeight / 2} stroke="rgba(248,117,170,0.4)" strokeWidth="1" />
                     </g>
                   )}
 
-                  {/* ✅ 대화창 UI 및 균형 잡힌 화살표/닫기 아이콘 복구 */}
+                  {/* 대화창 UI - 화살표와 닫기 아이콘 복구됨 */}
                   <g transform={`translate(0, ${canvasHeight})`} pointerEvents="none">
-                    <rect x="0" y="0" width="600" height="130" fill="#151515" rx="4" />
+                    <rect x="0" y="0" width="600" height="130" fill="#111111" rx="4" />
                     
                     <text x="20" y="42" fill="white" fontSize="20" fontWeight="bold" className="canvas-text">캐릭터 이름</text>
-                    <text x="20" y="80" fill="#f3f4f6" fontSize="16" className="canvas-text">"옆에 이미 잘려진 같은 탁 캐릭터 놓고 하면 비교할 수 있어요!"</text>
+                    <text x="20" y="80" fill="#f3f4f6" fontSize="16" className="canvas-text">"대화창의 왼쪽/윗면이 스탠딩 영역에 완벽히 정렬됩니다."</text>
                     
-                    {/* ✅ 크기와 비율을 비슷하게 맞춘 아이콘 (▶ 및 ✕) */}
-                    <polygon points="535,29 547,36 535,43" fill="white" />
-                    <path d="M565,29 L579,43 M579,29 L565,43" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                    {/* 크기와 비율이 비슷하게 조절된 우측 닫기 및 플레이 아이콘 */}
+                    <polygon points="545,30 557,36 545,42" fill="white" />
+                    <path d="M570,30 L582,42 M582,30 L570,42" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
                   </g>
                 </svg>
               ) : (
-                <div className="flex flex-col items-center justify-center text-center p-6 bg-white/50 rounded-xl border border-dashed border-gray-300">
-                  <Icon path="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" className="w-8 h-8 text-gray-400 mb-2" />
-                  <h3 className="text-sm font-bold text-gray-700 mb-1">업로드된 이미지가 없습니다</h3>
-                  <p className="text-[10px] text-gray-500">좌측 툴바에서 이미지를 추가해주세요.</p>
+                <div className="flex flex-col items-center justify-center text-center p-6 bg-white/60 rounded-xl border-2 border-dashed border-[#F875AA] m-8">
+                  <Icon path="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" className="w-10 h-10 text-deep-pink mb-2 opacity-50" />
+                  <h3 className="text-sm font-bold text-ink mb-1">업로드된 이미지가 없습니다</h3>
+                  <p className="text-[10px] text-gray-500">좌측 메뉴에서 이미지를 추가해주세요.</p>
                 </div>
               )}
             </div>
@@ -293,7 +348,6 @@
       );
     };
 
-    // --- 개별 이미지 에디터 컴포넌트 ---
     const ImageItem = ({ fileItem, scale, position, isSelected, onSelect, onRemove, onDownload, registerGetBlob, outlineThickness, outlineColor, canvasHeight }) => {
       const [imgDetails, setImgDetails] = useState(null);
 
@@ -308,7 +362,7 @@
           if (!imgDetails || !imgDetails.imgObj) return resolve(null);
           const canvas = document.createElement('canvas');
           canvas.width = CANVAS_WIDTH;
-          canvas.height = canvasHeight; // 동적 높이 적용
+          canvas.height = canvasHeight; 
           const ctx = canvas.getContext('2d');
           
           const drawImgWidth = imgDetails.width * scale;
@@ -351,21 +405,21 @@
       return (
         <div 
           onClick={onSelect}
-          className={`flex flex-col border rounded-xl overflow-hidden bg-white transition-all group cursor-pointer ${
-            isSelected ? 'border-black shadow-md ring-1 ring-black/20' : 'border-gray-200 shadow-sm hover:border-gray-400'
+          className={`flex flex-col border-2 rounded-xl overflow-hidden bg-white transition-all group cursor-pointer ${
+            isSelected ? 'border-deep-pink shadow-md ring-1 ring-deep-pink/30' : 'border-white shadow-sm hover:border-soft-pink'
           }`}
         >
-          <div className="flex justify-center items-center p-1.5 relative bg-[#e5e7eb]">
-            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 z-10 backdrop-blur-[1px]">
-              <button onClick={(e) => { e.stopPropagation(); getBlob().then(res => onDownload(res)); }} className="p-1.5 bg-white text-black rounded-full hover:scale-110 shadow border border-gray-200">
+          <div className="flex justify-center items-center p-1.5 relative bg-soft-pink">
+            <div className="absolute inset-0 bg-ink/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 z-10 backdrop-blur-[1px]">
+              <button onClick={(e) => { e.stopPropagation(); getBlob().then(res => onDownload(res)); }} className="p-1.5 bg-white text-ink rounded hover:scale-110 shadow-sm border border-gray-200" title="개별 저장">
                 <Icon path="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" className="w-3.5 h-3.5"/>
               </button>
-              <button onClick={(e) => { e.stopPropagation(); onRemove(fileItem.id); }} className="p-1.5 bg-white text-gray-600 hover:text-black rounded-full hover:scale-110 shadow border border-gray-200">
+              <button onClick={(e) => { e.stopPropagation(); onRemove(fileItem.id); }} className="p-1.5 bg-white text-deep-pink hover:bg-deep-pink hover:text-white rounded hover:scale-110 shadow-sm transition-colors border border-gray-200" title="삭제">
                 <Icon path="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" className="w-3.5 h-3.5"/>
               </button>
             </div>
 
-            <div className={`w-full relative overflow-hidden rounded border shadow-inner ${isSelected ? 'border-gray-400' : 'border-gray-300'}`} style={{ backgroundColor: '#e5e7eb' }}>
+            <div className={`w-full relative overflow-hidden rounded border shadow-inner ${isSelected ? 'border-deep-pink' : 'border-white'}`} style={{ backgroundColor: '#AEDEFC' }}>
               <svg viewBox={`0 0 ${CANVAS_WIDTH} ${canvasHeight}`} className="w-full h-auto block">
                 <defs>
                   <RoundedOutlineFilter id={filterId} thickness={outlineThickness} color={outlineColor} />
@@ -383,8 +437,8 @@
               </svg>
             </div>
           </div>
-          <div className={`p-1.5 bg-white border-t ${isSelected ? 'border-gray-300' : 'border-gray-100'} z-20`}>
-            <span className={`block text-[9px] text-center font-bold truncate ${isSelected ? 'text-black' : 'text-gray-500'}`} title={fileItem.file.name}>
+          <div className={`p-1.5 bg-ivory border-t ${isSelected ? 'border-deep-pink' : 'border-gray-200'} z-20`}>
+            <span className={`block text-[9px] text-center font-bold truncate ${isSelected ? 'text-deep-pink' : 'text-gray-500'}`} title={fileItem.file.name}>
               {fileItem.file.name}
             </span>
           </div>
@@ -392,7 +446,6 @@
       );
     };
 
-    // --- 메인 App 컴포넌트 ---
     function App() {
       const isZipLoaded = useJSZip();
       const [files, setFiles] = useState([]);
@@ -402,7 +455,7 @@
       
       const [globalScale, setGlobalScale] = useState(1);
       const [globalPosition, setGlobalPosition] = useState({ x: 0, y: 0 });
-      const [canvasHeight, setCanvasHeight] = useState(360); // 기본 높이
+      const [canvasHeight, setCanvasHeight] = useState(360); 
       const [isInitialized, setIsInitialized] = useState(false);
       
       const [outlineThickness, setOutlineThickness] = useState(0);
@@ -695,25 +748,23 @@
       };
 
       return (
-        <div className="flex flex-col md:flex-row h-screen w-full bg-[#eef0f2] overflow-hidden text-black">
+        <div className="flex flex-col md:flex-row h-screen w-full overflow-hidden text-ink">
           
-          <div className="md:py-4 md:pl-4 w-full md:w-[280px] h-auto md:h-full flex-shrink-0 relative z-10 overflow-visible">
-            <aside className="w-full bg-white/95 backdrop-blur-md md:rounded-2xl flex flex-col h-[50vh] md:h-full shadow-sm border border-gray-300 overflow-hidden">
+          <div className="md:py-6 md:pl-6 w-full md:w-[320px] h-auto md:h-full flex-shrink-0 relative z-10 overflow-visible">
+            <aside className="w-full retro-window flex flex-col h-[50vh] md:h-full overflow-hidden">
               
-              <div className="p-3 md:p-4 border-b border-gray-200 bg-gray-50 flex-shrink-0">
-                <h1 className="text-sm md:text-base font-bold tracking-tight flex items-center gap-1.5">
-                  ✂️ CCFolia 스탠딩 크롭기
-                </h1>
+              <div className="retro-header flex justify-between items-center flex-shrink-0 border-b-2 border-deep-pink">
+                <span className="flex items-center gap-1.5"><Icon path="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6z" className="w-3.5 h-3.5"/> CCFolia_Cropper.exe</span>
+                <div className="w-4 h-4 bg-soft-pink border border-white text-deep-pink flex items-center justify-center cursor-pointer hover:bg-white leading-none">✕</div>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-3 md:p-4 flex flex-col gap-4 custom-scrollbar">
+              <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-5 custom-scrollbar bg-ivory">
                 
-                {/* 1. 파일 업로드 */}
-                <div className="space-y-1.5">
-                  <h3 className="text-[10px] font-bold text-gray-500 tracking-tight">1. 파일 업로드(같은 사이즈 파일 업로드 권장)</h3>
+                <div className="space-y-2">
+                  <h3 className="text-[10px] font-bold text-deep-pink uppercase tracking-widest bg-soft-pink inline-block px-1.5 py-0.5 border border-pink-200">1. 파일 업로드</h3>
                   <button 
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-full flex items-center justify-center gap-1.5 bg-white text-black border border-gray-300 hover:bg-gray-100 py-1.5 rounded transition-all text-xs"
+                    className="retro-btn w-full flex items-center justify-center gap-1.5 bg-sky text-ink py-2 transition-all font-bold text-xs"
                   >
                     <Icon path="M12 4v16m8-8H4" className="w-3.5 h-3.5" /> 이미지 추가하기
                   </button>
@@ -722,34 +773,33 @@
                   <button 
                     onClick={handleRemoveWhiteBackground}
                     disabled={files.length === 0 || isProcessingBg}
-                    className={`w-full flex items-center justify-center gap-1.5 py-1.5 rounded text-xs transition-all border ${
+                    className={`retro-btn w-full flex items-center justify-center gap-1.5 py-2 text-xs font-bold transition-all ${
                       files.length > 0 && !isProcessingBg
-                        ? 'bg-gray-800 text-white border-gray-800 hover:bg-black' 
-                        : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                        ? 'bg-mint text-ink' 
+                        : 'bg-gray-200 text-gray-400 cursor-not-allowed border-gray-300'
                     }`}
                   >
                     {isProcessingBg ? "⏳ 지우는 중..." : <><Icon path="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" className="w-3.5 h-3.5" /> 흰색 배경 지우기</>}
                   </button>
                 </div>
 
-                {/* 2. 테두리 효과 */}
-                <div className={`space-y-1.5 ${files.length === 0 ? 'opacity-30 pointer-events-none' : ''}`}>
-                  <h3 className="text-[10px] font-bold text-gray-500 tracking-tight">2. 둥근 테두리</h3>
-                  <div className="bg-gray-50 border border-gray-200 rounded p-2 space-y-2">
-                    <div className="flex justify-between items-center text-[11px] font-bold text-black">
+                <div className={`space-y-2 ${files.length === 0 ? 'opacity-30 pointer-events-none' : ''}`}>
+                  <h3 className="text-[10px] font-bold text-deep-pink uppercase tracking-widest bg-soft-pink inline-block px-1.5 py-0.5 border border-pink-200">2. 둥근 테두리</h3>
+                  <div className="bg-white border-2 border-gray-200 p-2.5 space-y-3 shadow-inner">
+                    <div className="flex justify-between items-center text-[11px] font-bold text-ink">
                       <span>두께</span>
-                      <span className="bg-white border border-gray-300 px-1 py-0.5 rounded text-center w-8">{outlineThickness}px</span>
+                      <span className="bg-gray-100 border border-gray-300 px-1.5 py-0.5 text-center w-8 shadow-inner">{outlineThickness}px</span>
                     </div>
                     <input 
                       type="range" min="0" max="30" step="1" 
                       value={outlineThickness} onChange={(e) => setOutlineThickness(parseInt(e.target.value))}
-                      className="w-full h-1 bg-gray-300 rounded appearance-none cursor-pointer accent-black"
+                      className="w-full h-2 bg-gray-200 border border-gray-300 appearance-none cursor-pointer accent-deep-pink"
                     />
-                    <div className="flex justify-between items-center text-[11px] font-bold text-black pt-1">
-                      <span>색상</span>
-                      <label className="flex items-center gap-1 cursor-pointer">
-                        <span className="text-[9px] text-gray-500">{outlineColor.toUpperCase()}</span>
-                        <div className="relative w-4 h-4 rounded-full border border-gray-400 overflow-hidden" style={{ backgroundColor: outlineColor }}>
+                    <div className="flex justify-between items-center text-[11px] font-bold text-ink pt-1 border-t border-dashed border-gray-300">
+                      <span className="mt-1">색상</span>
+                      <label className="flex items-center gap-1.5 cursor-pointer mt-1">
+                        <span className="text-[9px] text-gray-500 font-mono bg-gray-100 px-1 shadow-inner">{outlineColor.toUpperCase()}</span>
+                        <div className="relative w-5 h-5 border-2 border-white shadow-sm overflow-hidden" style={{ backgroundColor: outlineColor }}>
                           <input type="color" value={outlineColor} onChange={e => setOutlineColor(e.target.value)} className="absolute opacity-0 w-8 h-8 -top-1 -left-1 cursor-pointer" />
                         </div>
                       </label>
@@ -757,89 +807,89 @@
                   </div>
                 </div>
 
-                {/* 3. 위치 및 크기 조절 */}
                 <div className={`space-y-2 ${files.length === 0 ? 'opacity-30 pointer-events-none' : ''}`}>
-                  <h3 className="text-[10px] font-bold text-gray-500 tracking-tight">3. 조절</h3>
+                  <h3 className="text-[10px] font-bold text-deep-pink uppercase tracking-widest bg-soft-pink inline-block px-1.5 py-0.5 border border-pink-200">3. 위치 및 조절</h3>
                   
                   <button 
                     onClick={handleGlobalAutoTrim}
-                    className="w-full flex items-center justify-center gap-1.5 bg-black text-white hover:bg-gray-800 py-2 rounded transition-all text-xs"
+                    className="retro-btn w-full flex items-center justify-center gap-1.5 bg-deep-pink text-white py-2 transition-all text-xs font-bold"
                   >
                     <Icon path="M13 10V3L4 14h7v7l9-11h-7z" className="w-3.5 h-3.5" /> 일괄 투명 여백 제거
                   </button>
                   <button 
                     onClick={handleGlobalFitBottom}
-                    className="w-full flex items-center justify-center gap-1.5 bg-white text-black border border-gray-300 hover:bg-gray-100 py-1.5 rounded transition-all text-xs"
+                    className="retro-btn w-full flex items-center justify-center gap-1.5 bg-white text-ink py-1.5 transition-all text-xs font-bold"
                   >
-                    <Icon path="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" className="w-3.5 h-3.5"/> 위치 초기화
+                    <Icon path="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" className="w-3.5 h-3.5"/> 하단 초기화
                   </button>
 
-                  <div className="pt-1 space-y-2.5 bg-gray-50 border border-gray-200 rounded p-2">
+                  <div className="pt-2 space-y-3 bg-white border-2 border-gray-200 shadow-inner p-2.5">
                     <div>
-                      <div className="flex justify-between items-center text-[11px] font-bold text-black mb-1">
+                      <div className="flex justify-between items-center text-[11px] font-bold text-ink mb-1.5">
                         <span>세로 높이</span>
-                        <span className="bg-white border border-gray-300 px-1 py-0.5 rounded text-center w-10">{canvasHeight}px</span>
+                        <span className="bg-gray-100 border border-gray-300 px-1.5 py-0.5 text-center w-10 shadow-inner">{canvasHeight}px</span>
                       </div>
                       <input 
                         type="range" min="100" max="1500" step="10" 
                         value={canvasHeight} onChange={handleCanvasHeightChange}
-                        className="w-full h-1 bg-gray-300 rounded appearance-none cursor-pointer accent-black"
+                        className="w-full h-2 bg-gray-200 border border-gray-300 appearance-none cursor-pointer accent-deep-pink"
                       />
                     </div>
-                    <div>
-                      <div className="flex justify-between items-center text-[11px] font-bold text-black mb-1">
-                        <span>크기 변경</span>
-                        <div className="flex items-center gap-1">
-                          <button onClick={() => handleGlobalScaleUpdate(1)} className="text-[8px] bg-white border border-gray-300 px-1 py-0.5 rounded hover:bg-gray-100">100%</button>
-                          <span className="bg-white border border-gray-300 px-1 py-0.5 rounded text-center w-8">{(globalScale * 100).toFixed(0)}%</span>
+                    <div className="pt-1 border-t border-dashed border-gray-300">
+                      <div className="flex justify-between items-center text-[11px] font-bold text-ink mb-1.5 mt-1">
+                        <span>크기 확대</span>
+                        <div className="flex items-center gap-1.5">
+                          <button onClick={() => handleGlobalScaleUpdate(1)} className="retro-btn text-[9px] bg-white px-1.5 py-0.5 active:translate-y-0 text-gray-500">100%</button>
+                          <span className="bg-gray-100 border border-gray-300 px-1.5 py-0.5 text-center w-8 shadow-inner">{(globalScale * 100).toFixed(0)}%</span>
                         </div>
                       </div>
                       <input 
                         type="range" min="0.1" max="3" step="0.01" 
                         value={globalScale} onChange={(e) => handleGlobalScaleUpdate(parseFloat(e.target.value))}
-                        className="w-full h-1 bg-gray-300 rounded appearance-none cursor-pointer accent-black"
+                        className="w-full h-2 bg-gray-200 border border-gray-300 appearance-none cursor-pointer accent-deep-pink"
                       />
                     </div>
                   </div>
                 </div>
 
-                {/* 4. 비교용 스탠딩 컴팩트 UI */}
-                <div className="space-y-1.5 pb-1">
+                <div className="space-y-2 pb-1">
                   <div className="flex justify-between items-center">
-                    <h3 className="text-[10px] font-bold text-gray-500 tracking-tight">4. 스탠딩 비교</h3>
-                    <span className="text-[8px] bg-gray-200 px-1.5 py-0.5 rounded font-bold text-gray-600">{refFiles.length}/3</span>
+                    <h3 className="text-[10px] font-bold text-deep-pink uppercase tracking-widest bg-soft-pink inline-block px-1.5 py-0.5 border border-pink-200">4. 스탠딩 비교</h3>
+                    <span className="text-[9px] font-bold text-white bg-deep-pink px-1.5 py-0.5 border border-white shadow-[1px_1px_0_rgba(0,0,0,0.1)]">{refFiles.length}/3</span>
                   </div>
                   
                   {refFiles.length < 3 && (
                     <button 
                       onClick={() => refInputRef.current?.click()}
-                      className="w-full flex items-center justify-center gap-1 bg-white text-black border border-gray-300 hover:bg-gray-100 py-1.5 rounded transition-all text-[11px]"
+                      className="retro-btn w-full flex items-center justify-center gap-1.5 bg-sky text-ink py-2 transition-all font-bold text-xs"
                     >
-                      <Icon path="M12 4v16m8-8H4" className="w-3 h-3" /> 비교용 이미지 추가
+                      <Icon path="M12 4v16m8-8H4" className="w-3.5 h-3.5" /> 비교 스탠딩 열기
                     </button>
                   )}
                   <input ref={refInputRef} type="file" multiple accept="image/png, image/jpeg, image/webp" onChange={handleRefFileChange} className="hidden" />
 
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     {refFiles.map((ref, idx) => (
-                      <div key={ref.id} className="p-2 bg-gray-50 border border-gray-300 rounded space-y-1.5 relative group">
-                        <button onClick={() => removeRef(ref.id)} className="absolute top-1 right-1 p-0.5 text-gray-400 hover:text-black hover:bg-gray-200 rounded" title="삭제">
-                          <Icon path="M6 18L18 6M6 6l12 12" className="w-3 h-3" />
-                        </button>
+                      <div key={ref.id} className="p-2.5 bg-white border-2 border-gray-200 space-y-2 relative group shadow-sm">
+                        <button onClick={() => removeRef(ref.id)} className="retro-btn absolute top-1.5 right-1.5 p-0.5 bg-soft-pink text-deep-pink leading-none w-5 h-5 flex items-center justify-center font-bold" title="삭제">✕</button>
                         
-                        <div className="flex items-center gap-1 pr-5">
-                          <span className="flex items-center justify-center w-3 h-3 bg-gray-300 text-black rounded text-[8px]">{idx + 1}</span>
-                          <span className="text-[9px] text-gray-800 truncate block">{ref.file.name}</span>
+                        <div className="flex items-center gap-1.5 pr-6 border-b border-dashed border-gray-200 pb-1.5">
+                          <span className="flex items-center justify-center w-4 h-4 bg-sky text-ink border border-white shadow-[1px_1px_0_rgba(0,0,0,0.1)] font-bold text-[9px]">{idx + 1}</span>
+                          <span className="text-[10px] font-bold text-ink truncate block">{ref.file.name}</span>
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="space-y-0.5">
-                            <div className="text-[8px] text-gray-500 text-center">투명도 ({Math.round(ref.opacity * 100)}%)</div>
-                            <input type="range" min="0" max="1" step="0.05" value={ref.opacity} onChange={(e) => updateRef(ref.id, 'opacity', parseFloat(e.target.value))} className="w-full h-1 bg-gray-300 rounded appearance-none cursor-pointer accent-black" title="투명도"/>
+                        <div className="grid grid-cols-2 gap-3 pt-0.5">
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-[9px] font-bold text-gray-500">
+                              <span>투명도</span><span className="bg-gray-100 border border-gray-200 px-1 shadow-inner">{Math.round(ref.opacity * 100)}%</span>
+                            </div>
+                            <input type="range" min="0" max="1" step="0.05" value={ref.opacity} onChange={(e) => updateRef(ref.id, 'opacity', parseFloat(e.target.value))} className="w-full h-1.5 bg-gray-200 border border-gray-300 appearance-none cursor-pointer accent-sky" />
                           </div>
-                          <div className="space-y-0.5">
-                            <div className="text-[8px] text-gray-500 text-center">좌우 ({ref.offsetX}px)</div>
-                            <input type="range" min="-500" max="500" step="5" value={ref.offsetX} onChange={(e) => updateRef(ref.id, 'offsetX', parseInt(e.target.value))} className="w-full h-1 bg-gray-300 rounded appearance-none cursor-pointer accent-black" title="X 위치"/>
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-[9px] font-bold text-gray-500">
+                              <span>좌우</span><span className="bg-gray-100 border border-gray-200 px-1 shadow-inner">{ref.offsetX}px</span>
+                            </div>
+                            <input type="range" min="-500" max="500" step="5" value={ref.offsetX} onChange={(e) => updateRef(ref.id, 'offsetX', parseInt(e.target.value))} className="w-full h-1.5 bg-gray-200 border border-gray-300 appearance-none cursor-pointer accent-sky" />
                           </div>
                         </div>
                       </div>
@@ -849,23 +899,23 @@
 
               </div>
 
-              <div className="p-3 border-t border-gray-200 bg-white flex-shrink-0">
+              <div className="p-3 border-t-2 border-white bg-soft-pink flex-shrink-0">
                 <button 
                   onClick={downloadAll}
                   disabled={!isZipLoaded || files.length === 0 || isDownloading}
-                  className={`w-full py-2.5 rounded font-bold flex items-center justify-center gap-1.5 transition-all text-xs ${
+                  className={`retro-btn w-full py-3 font-bold flex items-center justify-center gap-1.5 transition-all text-xs ${
                     files.length > 0 && isZipLoaded && !isDownloading
-                      ? 'bg-black text-white hover:bg-gray-800 shadow hover:-translate-y-px' 
-                      : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+                      ? 'bg-deep-pink text-white' 
+                      : 'bg-gray-200 text-gray-400 cursor-not-allowed border-gray-300'
                   }`}
                 >
-                  {isDownloading ? "⏳ 압축 중..." : <><Icon path="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" className="w-3.5 h-3.5"/> {files.length > 0 ? `ZIP 저장 (${files.length}장)` : '이미지 추가 필요'}</>}
+                  {isDownloading ? "⏳ 압축 중..." : <><Icon path="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" className="w-4 h-4"/> {files.length > 0 ? `ZIP 일괄 저장 (${files.length}장)` : '이미지를 추가해주세요'}</>}
                 </button>
               </div>
             </aside>
           </div>
 
-          <main className="flex-1 h-full overflow-y-auto p-4 flex flex-col gap-4 relative">
+          <main className="flex-1 h-full overflow-y-auto p-4 lg:p-6 flex flex-col gap-6 relative">
             <GamePreview 
               fileItem={selectedFileItem} 
               scale={globalScale} 
@@ -879,11 +929,12 @@
             />
 
             {files.length > 0 && (
-              <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200 mb-8">
-                <h2 className="text-sm font-bold text-black mb-3 flex items-center gap-1.5">
-                  출력 대기열 <span className="bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded text-[10px]">{files.length}</span>
+              <div className="bg-white p-4 md:p-5 rounded-2xl shadow-sm border-2 border-white shadow-[4px_4px_0_rgba(0,0,0,0.05)] mb-8">
+                <h2 className="text-sm font-bold text-ink mb-4 flex items-center gap-1.5 border-b-2 border-soft-pink pb-2">
+                  <span className="bg-deep-pink text-white px-2 py-0.5 border border-white shadow-[1px_1px_0_rgba(0,0,0,0.1)]">출력 대기열</span>
+                  <span className="text-gray-500 text-xs ml-1">총 {files.length}개</span>
                 </h2>
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4">
                   {files.map(fileItem => (
                     <ImageItem 
                       key={fileItem.id} 
